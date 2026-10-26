@@ -36,7 +36,9 @@ export function boundWizardCloseConfirmation(state,binding,requireControls=true)
 }
 
 export function boundInputMappingConflict(state,binding,requireControls=true) {
- if(!binding?.owner?.input_port||!wizardCloseDialogOwner(state,binding))return false;
+ const nodeInput=binding?.stage==='input_mapping'&&binding.owner?.status==='observed'
+  &&!state.prepared_node_context?.input_port&&!state.prepared_node_context?.output_port;
+ if(!(binding?.owner?.input_port||nodeInput)||!wizardCloseDialogOwner(state,binding))return false;
  const ui=state.ui,dialog=ui.dialogs[0];
  if(state.megaladata_build!=='7.4.2'||dialog.title!=='Megaladata 7.4.2'
   ||dialog.text!=='Megaladata 7.4.2 Links to nonexistent objects detected. Delete all lost links and continue? Delete and continue Continue without deleting Cancel')return false;

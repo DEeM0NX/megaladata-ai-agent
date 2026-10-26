@@ -94,6 +94,8 @@ If local attachments are not confirmed in `input_artifacts`, say so; do not
 guess a server path. `megaladata_dock_artifact_deliver` performs delivery.
 Do not overwrite someone else's files and do not change the allowed directories.
 
+If a request changes the settings of an existing Import, first check that a confirmed source CSV is present. Without it, ask for the file before executing or reading an unchanged Import: that read adds a visualizer table to the package even if the settings change is later refused. If the change request was already refused with `NOT_APPLIED` and `effect_possible=false`, do not run a baseline and do not save the package for cleanup; report the refusal and ask for the source CSV.
+
 When continuing after a package is opened, a save does not prove that an output
 is active. Before a new `transform.calculator`, `transform.filter_data`, or
 `transform.sorting`, confirm the required output of the same existing tabular

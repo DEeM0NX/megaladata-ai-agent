@@ -76,6 +76,8 @@ role. If the next standard step is refused, fix it or report the blocker; do
 not move it into JavaScript. This example applies to a functional-gap
 allowance; an explicit JavaScript request defines the allowed part itself.
 
+If the prepared table is the direct output of an existing Text File import and only field renames or type changes are required, edit that Import through `settings.columns`; do not add a Reform to bypass that edit. A request not to reconfigure the CSV load keeps `settings.source`, `settings.format`, the other fields, and their order; change the requested names, types, and necessary output mappings on the same Import. Obtain a verified delivery of the source attachment for the current session with `overwrite=reject`: a repeat of the previous path is accepted only after the server bytes are compared. On `UPLOAD_PATH_CONFLICT`, do not change the path or the overwrite policy to bypass the refusal.
+
 After opening a saved package and before a new Reform (`transform.reform_columns`),
 confirm that its existing tabular source has executed: saved nodes may be inactive.
 Use `megaladata_dock_node_read` with a successful local `source_operation_id`; if
@@ -85,6 +87,7 @@ matches that type's schema, and `finish=execute`. Wait for success and read the
 required output, then create the Reform. Do not recreate the source or change its
 parameters. Do not automatically run REST, JavaScript, export, or a chain with
 those side effects: first check that this matches the user's request.
+For an unchanged existing Text File import, use `mode=delimited`, `parameters:{settings:{}}`, `inputs:[]`, `mappings:[]`, `finish=execute`, and `read:{ports:[0]}`. That path runs the current configuration without opening the wizard. Do not pass `source` or a previous `upload_operation_id`, and do not deliver the same CSV again: an upload receipt from an old session is not needed here. `UPLOAD_PATH_CONFLICT` is not a reason to enable file replacement in order to activate a saved node. Changing the Import source, columns, format, or mappings still requires a verified upload from the current session.
 A refusal `reform preflight requires an active source output` with `NOT_APPLIED`,
 `effect_possible=false`, and `cleanup_complete=true` happens before Reform is
 created; after the source execution is confirmed, repeat the request with a new
@@ -208,8 +211,8 @@ substitute a name for it.
 For Unpivoting (`transform.collapse_columns`) used as an intermediate source
 in an extended graph, `finish="execute"` with
 `read:{ports:[0],sample_rows:0,require_exact_numbers:false}` is allowed; that
-executes the node without reading the intermediate table. An isolated Collapse
-reader does not read an arbitrary extended graph. An exact full read of Cross
+executes the node without reading the intermediate table. An isolated native full read of Collapse
+does not read an arbitrary extended graph. An exact full read of Cross
 Table (`transform.cross_table`) uses `read.coverage="full"` with
 `require_exact_numbers:true`. It is available only for a checked static chain
 `import→CrossTable` or `import→Collapse→CrossTable`, its own completed
@@ -248,16 +251,13 @@ operation first. On a confirmed refusal, correct the request from the schema
 and follow `next_step`; releasing an uncertain node operation is described in
 browser.md. If you cannot continue, report the specific blocker.
 
-For an ordinary read, set `require_exact_numbers:false`: the display does not
-prove numeric accuracy. To check exact values and conversions, set
-`require_exact_numbers:true`; the handler temporarily changes the format and
-restores it. To run Field Features (`transform.reform_columns`) again without
+An ordinary read takes values directly from the output port, without a Table and without changing formats. Both `require_exact_numbers` values keep exact supported scalars; `true` also refuses an unconfirmed Variant, a non-numeric real, and an ambiguous date. When it is `false`, account for the explicit precision limits. To run Field Features (`transform.reform_columns`) again without
 reconfiguration, use `parameters:{changes:[]}`, `inputs:[]`, and `mappings:[]`;
 fields are selected by input names, even after a rename. Take the export `inputs[0].source.node_id` from the successful result of the node that produced the requested total. For counts and sums by group, connect the Grouping summary, not the preceding Calculator detail. Use the same `node_id` and output whose row meaning, schema, and aggregates were checked; a match on one field or a file name is not enough. Before executing Export,
 read the table fed to its input and compare column names and order with the task.
 If they differ, fix them through Reform or Field Features, read the result again,
 and check the export `configuration.readback.input_mapping.fields`; claim the
-required order only after that confirmation. Text File export
+required order only after that confirmation. When continuing, reuse the existing Export for the same output: `target.kind=existing`, its exact `target.ref`, `inputs:[]` for the previous source, and a new `operation_id`. Changing the file name or upstream fields does not by itself require a new Export. After a `mappings` refusal, fix the upstream and repeat the same Export with `mappings:[]`; do not create a second Export for the same destination. Change column order only when the task requires it; keeping row order does not require rearranging columns. If the saved Export input mapping cannot produce the required layout, report that limitation. Text File export
 (`exports.text`) returns `output.file_artifacts` with the size and SHA-256 of
 the actual file after Execute; it has no data ports on the output. Compare the
 destination and the format with the task. Done and Close do not confirm the
