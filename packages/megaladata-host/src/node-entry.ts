@@ -1,0 +1,206 @@
+import { EventEmitter } from "node:events"
+import { isAbsolute } from "node:path"
+import { Option, Schema } from "effect"
+import { Megaladata } from "@megaladata-ai-agent/schema/megaladata"
+import { createMegaladataHost } from "./host"
+import { megaladataHostPort, type HostPort } from "./host-port"
+import { cliCredentials } from "./connection/cli-credentials"
+import { hostError } from "./errors"
+
+if (!process.send) throw new Error("MEGALADATA_PRIVATE_IPC_REQUIRED")
+
+const events = new EventEmitter()
+const operations = new Set<Promise<void>>()
+const stopped = Promise.withResolvers<void>()
+const state: {
+  starting?: Promise<void>
+  host?: Awaited<ReturnType<typeof createMegaladataHost>>
+  port?: ReturnType<typeof megaladataHostPort>
+  stopping?: Promise<void>
+  closed: boolean
+} = { closed: false }
+const port: HostPort = {
+  postMessage: (value) => reply(value),
+  on: (event, listener) => {
+    events.on(event, listener)
+  },
+  start() {},
+}
+const candidate = Schema.decodeUnknownOption(Megaladata.Candidate)
+const save = Schema.decodeUnknownOption(Megaladata.Save)
+const cancel = Schema.decodeUnknownOption(Megaladata.Cancel)
+const recover = Schema.decodeUnknownOption(Megaladata.AcknowledgeRecovery)
+
+process.on("message", (message: unknown) => {
+  const operation = dispatch(message)
+  operations.add(operation)
+  void operation
+    .finally(() => operations.delete(operation))
+    .catch(() => {
+      process.exitCode = 1
+    })
+})
+process.on("disconnect", () => {
+  void stop().catch(() => {
+    process.exitCode = 1
+  })
+})
+process.on("SIGTERM", () => {
+  void stop()
+    .finally(() => {
+      if (process.connected) process.disconnect()
+    })
+    .catch(() => {
+      process.exitCode = 1
+    })
+})
+
+async function dispatch(message: unknown) {
+  if (
+    !message ||
+    typeof message !== "object" ||
+    !("id" in message) ||
+    typeof message.id !== "string" ||
+    !("method" in message) ||
+    typeof message.method !== "string"
+  )
+    return
+  const input = "input" in message ? message.input : undefined
+  try {
+    if (message.method === "close") {
+      // Close is also valid after a rejected or still pending start. Exclude
+      // this close request from its own drain.
+      void stop().then(
+        () => reply({ id: message.id, result: { closed: true } }, true),
+        () => reply({ id: message.id, error: "MEGALADATA_HOST_CLEANUP_FAILED" }, true),
+      )
+      return
+    }
+    if (state.closed) throw new Error("MEGALADATA_HOST_CLOSED")
+    if (message.method === "start") {
+      if (state.starting || state.host) throw new Error("MEGALADATA_HANDSHAKE_INVALID")
+      if (
+        !input ||
+        typeof input !== "object" ||
+        !("protocol" in input) ||
+        input.protocol !== 1 ||
+        !("root" in input) ||
+        typeof input.root !== "string" ||
+        !isAbsolute(input.root) ||
+        !("resources" in input) ||
+        typeof input.resources !== "string" ||
+        !isAbsolute(input.resources) ||
+        !("headless" in input) ||
+        typeof input.headless !== "boolean" ||
+        ("strictRecovery" in input && typeof input.strictRecovery !== "boolean") ||
+        ("closeSavedPackageOnShutdown" in input && typeof input.closeSavedPackageOnShutdown !== "boolean") ||
+        ("browserRecovery" in input && typeof input.browserRecovery !== "boolean")
+      )
+        throw new Error("MEGALADATA_HANDSHAKE_INVALID")
+      const options = {
+        root: input.root,
+        resources: input.resources,
+        headless: input.headless,
+        preflightHeadless: input.headless,
+        strictRecovery: "strictRecovery" in input && input.strictRecovery === true,
+        closeSavedPackageOnShutdown: "closeSavedPackageOnShutdown" in input && input.closeSavedPackageOnShutdown === true,
+        browserRecovery: "browserRecovery" in input && input.browserRecovery === true,
+        codec: cliCredentials(process.platform, { root: input.root, resources: input.resources }),
+        environment: process.env,
+      }
+      state.starting = createMegaladataHost(options).then(async (host) => {
+        state.host = host
+        state.port = megaladataHostPort(port, host)
+        await host.settled()
+      })
+      await state.starting
+      if (state.closed) throw new Error("MEGALADATA_HOST_CLOSED")
+      reply({ id: message.id, result: { protocol: 1, ready: true, pid: process.pid } })
+      return
+    }
+    if (!state.host) throw new Error("MEGALADATA_HOST_NOT_READY")
+    if (!message.method.startsWith("connection.")) {
+      events.emit("message", { data: message })
+      return
+    }
+    const result = await management(message.method, input, state.host)
+    reply({ id: message.id, result })
+  } catch (error) {
+    reply({ id: message.id, error: hostError(error) })
+  }
+}
+
+async function management(method: string, input: unknown, host: Awaited<ReturnType<typeof createMegaladataHost>>) {
+  if (method === "connection.status" || method === "connection.read") return host.api.status()
+  if (method === "connection.ready") {
+    const before = await host.api.status()
+    if (!before.hasApiKey) throw new Error("MEGALADATA_CONFIG_REQUIRED")
+    await Promise.race([
+      host.catalog(before.generation),
+      stopped.promise.then(() => {
+        throw new Error("MEGALADATA_HOST_CLOSED")
+      }),
+    ]).catch(() => {
+      throw new Error(state.closed ? "MEGALADATA_HOST_CLOSED" : "MEGALADATA_CONNECTION_NOT_READY")
+    })
+    const after = await host.api.status()
+    if (after.generation !== before.generation || after.state !== "ready")
+      throw new Error("MEGALADATA_CONNECTION_NOT_READY")
+    return after
+  }
+  if (method === "connection.check") {
+    const value = candidate(input)
+    if (Option.isNone(value)) throw new Error("MEGALADATA_CANDIDATE_INVALID")
+    return host.api.check(value.value)
+  }
+  if (method === "connection.save") {
+    const value = save(input)
+    if (Option.isNone(value)) throw new Error("MEGALADATA_SAVE_INVALID")
+    await host.api.save(value.value)
+    await host.settled()
+    return host.api.status()
+  }
+  if (method === "connection.cancel-pending") {
+    const value = cancel(input)
+    if (Option.isNone(value)) throw new Error("MEGALADATA_CANCEL_INVALID")
+    return host.api.cancelPending(value.value)
+  }
+  if (method === "connection.recover") {
+    const value = recover(input)
+    if (Option.isNone(value)) throw new Error("MEGALADATA_RECOVERY_INVALID")
+    return host.api.acknowledgeRecovery(value.value)
+  }
+  throw new Error("MEGALADATA_METHOD_INVALID")
+}
+
+function stop() {
+  if (state.stopping) return state.stopping
+  state.closed = true
+  stopped.resolve()
+  events.emit("close")
+  state.host?.beginClose()
+  state.stopping = (async () => {
+    await state.starting?.catch(() => undefined)
+    state.host?.beginClose()
+    const cancellation = Promise.allSettled([state.host?.interruptAll()])
+    const drained = await Promise.allSettled([...operations])
+    const ports = await Promise.allSettled([state.port?.close()])
+    const results = await Promise.allSettled([state.host?.close()])
+    if ([...(await cancellation), ...drained, ...ports, ...results].some((result) => result.status === "rejected"))
+      throw new Error("MEGALADATA_HOST_CLEANUP_FAILED")
+  })()
+  return state.stopping
+}
+
+function reply(value: unknown, disconnect = false) {
+  if (!process.connected) return
+  process.send?.(value as object, (error) => {
+    if (error) {
+      void stop().catch(() => {
+        process.exitCode = 1
+      })
+      return
+    }
+    if (disconnect && process.connected) process.disconnect()
+  })
+}

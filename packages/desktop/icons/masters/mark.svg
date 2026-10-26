@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g id="mark" transform="translate(512 470) scale(0.9) translate(-512 -470)" fill="none" stroke-linecap="butt" stroke-linejoin="miter">
+    <polyline points="262 560 262 268 512 492 762 268 762 560" stroke="#01A9C1" stroke-width="108"/>
+    <polyline points="338 760 456 620 574 760" stroke="#2C3136" stroke-width="64"/>
+    <line x1="378" y1="724" x2="534" y2="724" stroke="#2C3136" stroke-width="52"/>
+    <circle cx="456" cy="700" r="22" fill="#01A9C1" stroke="none"/>
+    <line x1="640" y1="620" x2="640" y2="760" stroke="#2C3136" stroke-width="64"/>
+  </g>
+</svg>

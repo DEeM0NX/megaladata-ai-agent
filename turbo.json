@@ -1,0 +1,44 @@
+{
+  "$schema": "https://v2-8-13.turborepo.dev/schema.json",
+  "globalEnv": ["CI", "MEGALADATA_AI_AGENT_DISABLE_SHARE"],
+  "globalPassThroughEnv": ["CI", "MEGALADATA_AI_AGENT_DISABLE_SHARE"],
+  "tasks": {
+    "typecheck": {},
+    "build": {
+      "dependsOn": [],
+      "outputs": ["dist/**"]
+    },
+    "@megaladata-ai-agent/plugin#build": {
+      "dependsOn": ["@megaladata-ai-agent/sdk#build"],
+      "outputs": ["dist/**"]
+    },
+    "@megaladata-ai-agent/agent#test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "passThroughEnv": ["*"]
+    },
+    "@megaladata-ai-agent/megaladata-host#test": {
+      "outputs": [],
+      "passThroughEnv": ["MEGALADATA_AI_AGENT_TEST_NODE", "MEGALADATA_AI_AGENT_TEST_BROWSERS"]
+    },
+    "@megaladata-ai-agent/core#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@megaladata-ai-agent/function#test": {
+      "outputs": []
+    },
+    "@megaladata-ai-agent/app#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@megaladata-ai-agent/ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@megaladata-ai-agent/session-ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    }
+  }
+}

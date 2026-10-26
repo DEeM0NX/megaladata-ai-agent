@@ -1,0 +1,441 @@
+import { randomUUID } from "node:crypto"
+import { Option, Schema } from "effect"
+import { Megaladata } from "@megaladata-ai-agent/schema/megaladata"
+import { Product } from "@megaladata-ai-agent/product"
+import { connectionStore, type ActiveConnection } from "./connection-store"
+import type { recoveryStore } from "./recovery-store"
+
+export type RuntimeHandle = { close(): Promise<void>; reset?(): Promise<void>; ready?: Promise<void> }
+export type ConnectionRuntime = {
+  check(candidate: ActiveConnection, signal?: AbortSignal): Promise<void | Megaladata.BrowserStatus>
+  prepare(candidate: ActiveConnection): Promise<RuntimeHandle>
+}
+const decodeCandidate = Schema.decodeUnknownOption(Megaladata.Candidate)
+
+export async function connectionService(
+  store: ReturnType<typeof connectionStore>,
+  runtime: ConnectionRuntime,
+  recovery?: Pick<Awaited<ReturnType<typeof recoveryStore>>, "pending" | "acknowledge">,
+) {
+  const state: {
+    active?: ActiveConnection
+    handle?: RuntimeHandle
+    revision: number
+    generation: number
+    pending?: ActiveConnection
+    browser: Megaladata.BrowserStatus
+    pendingBrowser?: Megaladata.BrowserStatus
+    phase: Megaladata.View["state"]
+    readiness: "starting" | "ready" | "recoverable-error"
+    applying?: Promise<void>
+    failure?: string
+    writing?: boolean
+    closing?: boolean
+    recovering?: Promise<void>
+    checkCleanupFailed?: boolean
+  } = { revision: 0, generation: 0, phase: "unconfigured", readiness: "starting", browser: { state: "unknown" } }
+  const validations = new Map<
+    string,
+    {
+      candidate: ActiveConnection
+      browser: Megaladata.BrowserStatus
+      expiresAt: number
+      timer: ReturnType<typeof setTimeout>
+    }
+  >()
+  const leases = new Map<string, { generation: number; recovery: boolean; active: boolean }>()
+  const checks = new Map<AbortController, Promise<void | Megaladata.BrowserStatus>>()
+  state.active = await store.read().catch(() => {
+    state.phase = "recoverable-error"
+    return undefined
+  })
+  state.revision = state.active?.revision ?? 0
+  const pending = await store.pending().catch(() => {
+    state.phase = "recoverable-error"
+    state.failure = "MEGALADATA_STORE_READ_FAILED"
+    return undefined
+  })
+  if (pending && pending.generation > (state.active?.generation ?? 0)) {
+    state.pending = pending
+    state.revision = pending.revision
+  }
+  state.generation = Math.max(
+    state.active?.generation ?? 0,
+    pending?.generation ?? 0,
+    await store.latestGeneration().catch(() => {
+      state.phase = "recoverable-error"
+      return 0
+    }),
+  )
+  if (state.active) {
+    state.phase = "starting"
+    state.applying = runtime
+      .prepare(state.active)
+      .then(
+        (handle) => {
+          state.handle = handle
+          observeReadiness(handle)
+        },
+        () => {
+          state.phase = "recoverable-error"
+        },
+      )
+      .finally(() => {
+        state.applying = undefined
+        progress()
+      })
+  }
+
+  function observeReadiness(handle: RuntimeHandle) {
+    state.readiness = handle.ready ? "starting" : "ready"
+    state.phase = state.pending ? "pending" : state.readiness
+    if (!handle.ready) return
+    void handle.ready.then(
+      () => {
+        if (state.closing || state.handle !== handle) return
+        state.readiness = "ready"
+        state.phase = state.pending ? "pending" : "ready"
+      },
+      () => {
+        if (state.closing || state.handle !== handle) return
+        state.readiness = "recoverable-error"
+        state.failure = "MEGALADATA_RUNTIME_START_FAILED"
+        state.phase = state.pending ? "pending" : "recoverable-error"
+      },
+    )
+  }
+
+  function clearValidations() {
+    validations.forEach((entry) => clearTimeout(entry.timer))
+    validations.clear()
+  }
+  function beginClose() {
+    if (state.closing) return
+    state.closing = true
+    clearValidations()
+    for (const controller of checks.keys()) controller.abort(Error("MEGALADATA_HOST_CLOSED"))
+  }
+  function view(): Megaladata.View {
+    const current = state.active
+    return {
+      revision: state.revision,
+      generation: current?.generation ?? 0,
+      url: settingsAddress(current?.url ?? Product.connection.url),
+      username: current?.username ?? Product.connection.username,
+      folder: `/${current?.username ?? Product.connection.username}`,
+      hasApiKey: !!current?.apiKey,
+      hasPassword: !!current?.password,
+      browser: { ...state.browser },
+      state:
+        recovery?.pending().length || state.failure === "MEGALADATA_STORE_READ_FAILED" ? "recoverable-error" : state.phase,
+      ...(recovery?.pending().length ? { recoveries: recovery.pending() } : {}),
+      ...(state.failure ? { failure: state.failure } : {}),
+    }
+  }
+  function progress() {
+    if (state.closing || !state.pending || leases.size || state.applying || state.writing || recovery?.pending().length)
+      return
+    const candidate = state.pending
+    state.phase = "starting"
+    state.applying = (async () => {
+      const prepared = await runtime.prepare(candidate).catch(() => {
+        state.failure = "MEGALADATA_RUNTIME_START_FAILED"
+        return undefined
+      })
+      if (!prepared) {
+        if (state.pending === candidate) {
+          state.pending = undefined
+          state.phase = state.handle ? state.readiness : "recoverable-error"
+        }
+        return
+      }
+      // Local activation may commit before the background catalog request settles.
+      void prepared.ready?.catch(() => undefined)
+      if (state.pending !== candidate) {
+        await prepared.close().catch(() => undefined)
+        return
+      }
+      const committed = await store
+        .staged(candidate.generation)
+        .then((previous) => {
+          if (!previous) return store.stage(candidate)
+          if (
+            previous.revision !== candidate.revision ||
+            previous.url !== candidate.url ||
+            previous.urlSource !== candidate.urlSource ||
+            previous.username !== candidate.username ||
+            previous.apiKey !== candidate.apiKey ||
+            previous.password !== candidate.password
+          )
+            throw Error("MEGALADATA_GENERATION_CONFLICT")
+        })
+        .then(() => store.activate(candidate.generation))
+        .then(
+          () => true,
+          async () => {
+            // A directory fsync can fail after rename has already changed the active pointer.
+            // Keep the live runtime aligned with that pointer; report the durability failure.
+            state.failure = "MEGALADATA_STORE_WRITE_FAILED"
+            const persisted = await store.read().catch(() => undefined)
+            return (
+              persisted?.generation === candidate.generation &&
+              persisted.revision === candidate.revision &&
+              persisted.url === candidate.url &&
+              persisted.username === candidate.username &&
+              persisted.apiKey === candidate.apiKey &&
+              persisted.password === candidate.password
+            )
+          },
+        )
+      if (!committed) {
+        state.failure = "MEGALADATA_STORE_WRITE_FAILED"
+        await prepared.close().catch(() => undefined)
+        state.pending = undefined
+        state.phase = state.handle ? state.readiness : "recoverable-error"
+        return
+      }
+      const previous = state.handle
+      state.active = candidate
+      state.browser = state.pendingBrowser ?? { state: "unknown" }
+      state.pendingBrowser = undefined
+      state.handle = prepared
+      state.pending = undefined
+      observeReadiness(prepared)
+      await store.clearPending().catch(() => {
+        state.failure = "MEGALADATA_STORE_WRITE_FAILED"
+      })
+      await previous?.close().catch(() => undefined)
+    })().finally(() => {
+      state.applying = undefined
+      progress()
+    })
+  }
+  const api: Megaladata.API = {
+    async acknowledgeRecovery(input) {
+      if (state.closing) throw Error("MEGALADATA_HOST_CLOSED")
+      if (input.revision !== state.revision) throw Error("MEGALADATA_REVISION_CONFLICT")
+      if (state.applying || state.writing) throw Error("MEGALADATA_APPLICATION_PENDING")
+      if ([...leases.values()].some((lease) => lease.active)) throw Error("MEGALADATA_RECOVERY_BUSY")
+      if (!recovery) throw Error("MEGALADATA_RECOVERY_UNAVAILABLE")
+      const ids = recovery.pending()
+      if (
+        ids.length !== input.ids.length ||
+        new Set(input.ids).size !== ids.length ||
+        input.ids.some((id) => !ids.includes(id))
+      )
+        throw Error("MEGALADATA_RECOVERY_CONFLICT")
+      state.writing = true
+      state.recovering = (async () => {
+        await state.handle?.reset?.()
+        if (state.closing) throw Error("MEGALADATA_HOST_CLOSED")
+        await recovery.acknowledge(input.ids)
+        leases.clear()
+      })()
+      try {
+        await state.recovering
+      } finally {
+        state.recovering = undefined
+        state.writing = false
+      }
+      clearValidations()
+      progress()
+      return view()
+    },
+    async read() {
+      return view()
+    },
+    async status() {
+      return view()
+    },
+    async check(input) {
+      if (state.closing) throw new Error("MEGALADATA_HOST_CLOSED")
+      const decoded = decodeCandidate(input)
+      if (Option.isNone(decoded)) throw new Error("MEGALADATA_CANDIDATE_INVALID")
+      const candidate = decoded.value
+      if (candidate.revision !== state.revision) throw new Error("MEGALADATA_REVISION_CONFLICT")
+      if (state.applying || state.writing) throw new Error("MEGALADATA_APPLICATION_PENDING")
+      validateAddress(candidate.url, candidate.username)
+      const apiKey =
+        candidate.apiKey.operation === "preserve" ? (state.pending ?? state.active)?.apiKey : candidate.apiKey.value
+      if (!apiKey) throw new Error("MEGALADATA_API_KEY_REQUIRED")
+      const password =
+        candidate.password.operation === "preserve"
+          ? ((state.pending ?? state.active)?.password ?? "")
+          : candidate.password.operation === "empty"
+            ? ""
+            : candidate.password.value
+      const record = {
+        generation: state.generation + 1,
+        revision: state.revision + 1,
+        url: settingsAddress(candidate.url),
+        // Retain private provenance for the validated user choice. Startup
+        // preserves saved URLs independently of this marker.
+        urlSource: "explicit" as const,
+        username: candidate.username,
+        apiKey,
+        password,
+      }
+      const controller = new AbortController()
+      const checking = Promise.resolve().then(() => runtime.check(record, controller.signal))
+      checks.set(controller, checking)
+      const browser = (await checking
+        .catch((error: unknown) => {
+          if (error instanceof Error && error.message === "MEGALADATA_RUNTIME_CLEANUP_FAILED")
+            state.checkCleanupFailed = true
+          controller.signal.throwIfAborted()
+          const code =
+            error instanceof Error &&
+            [
+              "MEGALADATA_KNOWLEDGE_AUTH_FAILED",
+              "MEGALADATA_KNOWLEDGE_UNAVAILABLE",
+              "MEGALADATA_LOGIN_REJECTED",
+              "MEGALADATA_ACCOUNT_MISMATCH",
+              "MEGALADATA_LOGIN_UNAVAILABLE",
+              "MEGALADATA_BROWSER_START_FAILED",
+            ].includes(error.message)
+              ? error.message
+              : "MEGALADATA_CONNECTION_CHECK_FAILED"
+          throw new Error(code)
+        })
+        .finally(() => checks.delete(controller))) ?? { state: "unknown" as const }
+      if (state.closing) throw new Error("MEGALADATA_HOST_CLOSED")
+      if (candidate.revision !== state.revision || state.applying || state.writing)
+        throw new Error("MEGALADATA_REVISION_CONFLICT")
+      if (
+        state.active?.url === record.url &&
+        state.active.username === record.username &&
+        state.active.apiKey === record.apiKey &&
+        state.active.password === record.password
+      )
+        state.browser = { ...browser }
+      const validationId = randomUUID()
+      const expiresAt = Date.now() + 5 * 60_000
+      validations.forEach((entry, key) => {
+        if (entry.expiresAt <= Date.now()) validations.delete(key)
+      })
+      const timer = setTimeout(() => validations.delete(validationId), 5 * 60_000)
+      timer.unref()
+      validations.set(validationId, { candidate: record, browser, expiresAt, timer })
+      return { validationId, expiresAt, browser: { ...browser } }
+    },
+    async save(input) {
+      if (state.closing) throw new Error("MEGALADATA_HOST_CLOSED")
+      if (input.revision !== state.revision) throw new Error("MEGALADATA_REVISION_CONFLICT")
+      if (state.applying || state.writing) throw new Error("MEGALADATA_APPLICATION_PENDING")
+      const validation = validations.get(input.validationId)
+      if (!validation || validation.expiresAt <= Date.now()) throw new Error("MEGALADATA_VALIDATION_EXPIRED")
+      clearValidations()
+      state.writing = true
+      const candidate = { ...validation.candidate, generation: state.generation + 1, revision: state.revision + 1 }
+      try {
+        await store.savePending(candidate)
+      } finally {
+        state.writing = false
+      }
+      state.failure = undefined
+      state.generation = candidate.generation
+      state.revision = candidate.revision
+      state.pending = candidate
+      state.pendingBrowser = validation.browser
+      state.phase = "pending"
+      progress()
+      return view()
+    },
+    async cancelPending(input) {
+      if (state.closing) throw new Error("MEGALADATA_HOST_CLOSED")
+      if (input.revision !== state.revision) throw new Error("MEGALADATA_REVISION_CONFLICT")
+      // Once a filesystem commit begins, cancellation cannot race the active pointer.
+      if (state.applying || state.writing) throw new Error("MEGALADATA_APPLICATION_COMMITTING")
+      if (!state.pending) return view()
+      state.writing = true
+      try {
+        await store.clearPending()
+      } finally {
+        state.writing = false
+      }
+      state.pending = undefined
+      state.pendingBrowser = undefined
+      state.revision++
+      clearValidations()
+      state.phase = state.handle ? state.readiness : state.active ? "recoverable-error" : "unconfigured"
+      return view()
+    },
+  }
+  progress()
+  return {
+    beginClose,
+    api,
+    browserStatus(generation: number, browser: Megaladata.BrowserStatus) {
+      if (state.closing || generation !== state.active?.generation) return
+      state.browser = { ...browser }
+    },
+    acquire(run: string) {
+      if (
+        state.closing ||
+        state.pending ||
+        state.writing ||
+        recovery?.pending().length ||
+        state.failure === "MEGALADATA_STORE_READ_FAILED" ||
+        state.phase !== "ready" ||
+        !state.active ||
+        leases.has(run)
+      )
+        return
+      const lease = { generation: state.active.generation, recovery: false, active: true }
+      leases.set(run, lease)
+      return {
+        generation: lease.generation,
+        // Uncertain effects outlive the model drain. Only reconciliation releases recovery.
+        holdRecovery() {
+          if (leases.get(run) === lease) lease.recovery = true
+        },
+        release() {
+          if (leases.get(run) !== lease) return
+          lease.active = false
+          if (lease.recovery) return
+          leases.delete(run)
+          progress()
+        },
+        reconciled() {
+          if (leases.get(run) !== lease) return
+          lease.recovery = false
+          if (lease.active) return
+          leases.delete(run)
+          progress()
+        },
+      }
+    },
+    async settled() {
+      while (state.applying) await state.applying
+    },
+    async close() {
+      beginClose()
+      await Promise.allSettled([...checks.values()])
+      state.pending = undefined
+      clearValidations()
+      await state.recovering?.catch(() => undefined)
+      await state.applying
+      await state.handle?.close()
+      state.handle = undefined
+      state.phase = state.active ? "recoverable-error" : "unconfigured"
+      if (state.checkCleanupFailed) throw Error("MEGALADATA_RUNTIME_CLEANUP_FAILED")
+    },
+  }
+}
+
+// The browser adds its automation flag privately; old saved URLs may contain it.
+function settingsAddress(value: string) {
+  const url = new URL(value)
+  if (!url.searchParams.has("testable")) return value
+  url.searchParams.delete("testable")
+  return url.href
+}
+
+function validateAddress(url: string, username: string) {
+  if (!URL.canParse(url)) throw new Error("MEGALADATA_URL_INVALID")
+  const parsed = new URL(url)
+  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password)
+    throw new Error("MEGALADATA_URL_INVALID")
+  if (!username || username === "." || username === ".." || /[\/\\\x00-\x1f\x7f]/.test(username))
+    throw new Error("MEGALADATA_USERNAME_INVALID")
+}

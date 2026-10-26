@@ -1,0 +1,37 @@
+import { readFile, readlink, lstat, realpath, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { isAbsolute, join, relative, sep } from 'node:path';
+
+export async function verifyResources(root) {
+  if (!isAbsolute(root)) throw Error('MEGALADATA_RESOURCES_INVALID');
+  const directory = await realpath(root);
+  const manifest = JSON.parse(await readFile(join(directory, 'resource-manifest.json'), 'utf8'));
+  if (manifest.protocol !== 1 || manifest.nodeVersion !== process.versions.node || !Array.isArray(manifest.files)
+    || !manifest.files.length || typeof manifest.node !== 'string' || typeof manifest.browser !== 'string') throw Error('MEGALADATA_RESOURCES_INVALID');
+  const seen = new Set();
+  for (const item of manifest.files) {
+    if (typeof item.path !== 'string' || isAbsolute(item.path) || item.path.split(/[\\/]/).some(x => x === '..' || x === '.')
+      || !/^[a-f0-9]{64}$/.test(item.sha256) || seen.has(item.path)) throw Error('MEGALADATA_RESOURCES_INVALID');
+    seen.add(item.path);
+    const file = await realpath(join(directory, item.path));
+    const local = relative(directory, file);
+    if (local === '..' || local.startsWith('..' + sep) || isAbsolute(local)) throw Error('MEGALADATA_RESOURCES_INVALID');
+    if (item.link !== undefined && (typeof item.link !== 'string' || !(await lstat(join(directory, item.path))).isSymbolicLink()
+      || await readlink(join(directory, item.path)) !== item.link)) throw Error('MEGALADATA_RESOURCES_INVALID');
+    if (item.directory !== undefined && item.directory !== true) throw Error('MEGALADATA_RESOURCES_INVALID');
+    if (item.directory === true ? typeof item.link !== 'string' || !(await stat(file)).isDirectory() : !(await stat(file)).isFile())
+      throw Error('MEGALADATA_RESOURCES_INVALID');
+    if (createHash('sha256').update(item.directory === true ? item.link : await readFile(file)).digest('hex') !== item.sha256)
+      throw Error('MEGALADATA_RESOURCE_HASH_MISMATCH');
+  }
+  if (!seen.has(manifest.node) || !seen.has(manifest.browser)) throw Error('MEGALADATA_RESOURCES_INVALID');
+  if (await realpath(process.execPath) !== await realpath(join(directory, manifest.node))) throw Error('MEGALADATA_NODE_PATH_MISMATCH');
+  return {
+    manifest,
+    nodePath: join(directory, manifest.node),
+    browserPath: join(directory, manifest.browser),
+    browserRoot: join(directory, 'browsers'),
+    browserHash: manifest.files.find(file => file.path === manifest.browser).sha256,
+    manifestHash: createHash('sha256').update(await readFile(join(directory, 'resource-manifest.json'))).digest('hex'),
+  };
+}

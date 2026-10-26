@@ -1,0 +1,285 @@
+import { fork } from "node:child_process"
+import { randomUUID } from "node:crypto"
+import { mkdir, writeFile } from "node:fs/promises"
+import { isAbsolute, join } from "node:path"
+
+export type Launch = {
+  node: string
+  entry: string
+  resources: string
+  stateDir: string
+  generation: number
+  chat: string
+  endpoint: string
+  connection: { apiKey: string; password: string; url: string; username: string }
+  actionManifestUri?: string
+  actionManifestSha256?: string
+  validation?: boolean
+  headless?: boolean
+  environment?: NodeJS.ProcessEnv
+  // Acceptance-only: exact saved package path the runtime closes and logs out of during
+  // its own shutdown (bridge acceptanceCleanupPackage). Product code never sets it.
+  acceptanceCleanupPackage?: string
+  // Private owner policy. The runtime derives the path from its confirmed Save.
+  closeSavedPackageOnShutdown?: boolean
+  // Private launcher capability for temporary browser recovery tools.
+  browserRecovery?: boolean
+}
+
+type ProcessLaunch = Pick<Launch, "node" | "entry" | "stateDir" | "generation" | "environment">
+export type KnowledgeLaunch = ProcessLaunch & Pick<Launch, "endpoint"> & { apiKey: string }
+
+export class RuntimeStartupError extends Error {
+  constructor(
+    cause: unknown,
+    readonly cleanupConfirmed: boolean,
+  ) {
+    super(cause instanceof Error ? cause.message : "MEGALADATA_RUNTIME_FAILED", { cause })
+    this.name = "RuntimeStartupError"
+  }
+}
+
+export function runtimeEnvironment(environment: NodeJS.ProcessEnv, platform = process.platform) {
+  const env: NodeJS.ProcessEnv = {}
+  const keys = [
+    "HOME",
+    "USERPROFILE",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "PROGRAMDATA",
+    "APPDATA",
+    "LOCALAPPDATA",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "LANG",
+    "LC_ALL",
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "NODE_EXTRA_CA_CERTS",
+    "NODE_USE_SYSTEM_CA",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+    "NODE_USE_ENV_PROXY",
+  ]
+  if (platform === "linux")
+    keys.push(
+      "DISPLAY",
+      "XAUTHORITY",
+      "XDG_RUNTIME_DIR",
+      "WAYLAND_DISPLAY",
+      "XDG_SESSION_TYPE",
+      "XDG_CURRENT_DESKTOP",
+      "DBUS_SESSION_BUS_ADDRESS",
+      "XDG_CONFIG_HOME",
+    )
+  if (platform === "win32") {
+    const allowed = new Set(keys.map((key) => key.toUpperCase()))
+    // Match Windows case-insensitive names, including plain IPC/environment
+    // objects. Emit one spelling per key; sorted precedence matches Node spawn.
+    Object.keys(environment)
+      .sort()
+      .forEach((key) => {
+        const name = key.toUpperCase()
+        if (allowed.has(name) && environment[key] && !(name in env)) env[name] = environment[key]
+      })
+    return env
+  }
+  keys.forEach((key) => {
+    if (environment[key]) env[key] = environment[key]
+  })
+  return env
+}
+
+// One browser child per generation/chat; knowledge has one child per generation.
+// Both use the same private transport and acknowledged cleanup contract.
+export async function supervise(input: Launch, signal?: AbortSignal) {
+  if (!isAbsolute(input.resources)) throw new Error("MEGALADATA_ABSOLUTE_PATH_REQUIRED")
+  // Browser validation follows the separate key-only Help check in Host.
+  const runtime = await superviseProcess(
+    input,
+    { ...input, environment: undefined, protocol: 1 },
+    input.validation ? 210_000 : 120_000,
+    signal,
+    input.closeSavedPackageOnShutdown === true ? 45_000 : 5000,
+  )
+  const ready = runtime.ready
+  if (
+    input.validation
+      ? !("checked" in ready) || ready.checked !== true
+      : !("ready" in ready) || ready.ready !== true || !("chat" in ready) || ready.chat !== input.chat
+  ) {
+    const cleanupConfirmed = await runtime.close().then(
+      () => true,
+      () => false,
+    )
+    throw new RuntimeStartupError(new Error("MEGALADATA_HANDSHAKE_INVALID"), cleanupConfirmed)
+  }
+  return runtime
+}
+
+export async function superviseKnowledge(input: KnowledgeLaunch, signal?: AbortSignal) {
+  const runtime = await superviseProcess(
+    input,
+    {
+      protocol: 1,
+      generation: input.generation,
+      endpoint: input.endpoint,
+      apiKey: input.apiKey,
+    },
+    120_000,
+    signal,
+  )
+  const ready = runtime.ready
+  if (!("started" in ready) || ready.started !== true) {
+    const cleanupConfirmed = await runtime.close().then(
+      () => true,
+      () => false,
+    )
+    throw new RuntimeStartupError(new Error("MEGALADATA_HANDSHAKE_INVALID"), cleanupConfirmed)
+  }
+  return { ...runtime, ready }
+}
+
+async function superviseProcess(
+  input: ProcessLaunch,
+  start: unknown,
+  timeout = 120_000,
+  signal?: AbortSignal,
+  closeTimeout = 5000,
+) {
+  signal?.throwIfAborted()
+  if (![input.node, input.entry, input.stateDir].every(isAbsolute)) throw new Error("MEGALADATA_ABSOLUTE_PATH_REQUIRED")
+  await mkdir(input.stateDir, { recursive: true, mode: 0o700 })
+  signal?.throwIfAborted()
+  const child = fork(input.entry, [], {
+    execPath: input.node,
+    execArgv: ["--use-system-ca"],
+    cwd: input.stateDir,
+    env: runtimeEnvironment(input.environment ?? process.env),
+    stdio: ["ignore", "ignore", "ignore", "ipc"],
+  })
+  const pending = new Map<
+    string,
+    { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }
+  >()
+  const exited = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
+    child.once("exit", (code, signal) => resolve({ code, signal }))
+    child.once("error", () => resolve({ code: 1, signal: null }))
+  })
+  function fail() {
+    pending.forEach((request) => {
+      clearTimeout(request.timer)
+      request.reject(new Error("MEGALADATA_RUNTIME_DISCONNECTED"))
+    })
+    pending.clear()
+  }
+  child.on("disconnect", fail)
+  child.on("exit", fail)
+  child.on("error", fail)
+  child.on("message", (message) => {
+    if (!message || typeof message !== "object" || !("id" in message) || typeof message.id !== "string") return
+    const request = pending.get(message.id)
+    if (!request) return
+    pending.delete(message.id)
+    clearTimeout(request.timer)
+    if ("error" in message) {
+      request.reject(
+        new Error(
+          typeof message.error === "string" && /^MEGALADATA_[A-Z_]+$/.test(message.error)
+            ? message.error
+            : "MEGALADATA_RUNTIME_FAILED",
+        ),
+      )
+      return
+    }
+    request.resolve("result" in message ? message.result : undefined)
+  })
+  function request(operation: string, value?: unknown, timeout = 120_000) {
+    if (!child.connected) return Promise.reject(new Error("MEGALADATA_RUNTIME_DISCONNECTED"))
+    const id = randomUUID()
+    return new Promise<unknown>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pending.delete(id)
+        reject(new Error("MEGALADATA_RUNTIME_TIMEOUT"))
+      }, timeout)
+      pending.set(id, { resolve, reject, timer })
+      child.send({ id, operation, input: value }, (error) => {
+        if (error) fail()
+      })
+    })
+  }
+  const closing: { promise?: Promise<void> } = {}
+  function close() {
+    if (closing.promise) return closing.promise
+    closing.promise = (async () => {
+      const started = new Date().toISOString()
+      // Native guarded package close/logout precedes resource close in this mode.
+      // This shutdown allowance does not extend an admitted operation deadline.
+      const response = await request("close", undefined, closeTimeout)
+        .then((result) => ({ result, error: null }), (error: unknown) => ({ result: undefined,
+          error: error instanceof Error && ["MEGALADATA_RUNTIME_TIMEOUT", "MEGALADATA_RUNTIME_DISCONNECTED",
+            "MEGALADATA_RUNTIME_CLEANUP_FAILED"].includes(error.message) ? error.message : "MEGALADATA_RUNTIME_FAILED" }))
+      const reply = response.result
+      const timer = setTimeout(() => child.kill("SIGKILL"), 5000)
+      try {
+        const outcome = await exited
+        // Private transport evidence, not a cleanup receipt. Never include the
+        // remote reply or exception text; they may contain sensitive values.
+        await writeFile(join(input.stateDir, `runtime-close-${child.pid}-${randomUUID()}.json`), JSON.stringify({
+          version: 1, pid: child.pid, started_at: started, completed_at: new Date().toISOString(),
+          request_error: response.error,
+          closed_ack: !!reply && typeof reply === "object" && "closed" in reply && reply.closed === true,
+          exit_code: outcome.code, exit_signal: outcome.signal,
+        }) + "\n", { mode: 0o600, flag: "wx" }).catch(() => undefined)
+        if (
+          !reply ||
+          typeof reply !== "object" ||
+          !("closed" in reply) ||
+          reply.closed !== true ||
+          outcome.code !== 0 ||
+          outcome.signal
+        )
+          throw new Error("MEGALADATA_RUNTIME_CLEANUP_FAILED")
+      } finally {
+        clearTimeout(timer)
+      }
+    })()
+    return closing.promise
+  }
+  const cancel = () => {
+    void close().catch(() => undefined)
+  }
+  signal?.addEventListener("abort", cancel, { once: true })
+  try {
+    const ready = await request("start", start, timeout)
+    signal?.throwIfAborted()
+    if (
+      !ready ||
+      typeof ready !== "object" ||
+      !("protocol" in ready) ||
+      ready.protocol !== 1 ||
+      !("generation" in ready) ||
+      ready.generation !== input.generation
+    ) {
+      throw new Error("MEGALADATA_HANDSHAKE_INVALID")
+    }
+    return { ready, request, close, exited }
+  } catch (cause) {
+    const cleanupConfirmed = await close().then(
+      () => true,
+      () => false,
+    )
+    // Cancellation may replace the request failure only after cleanup is confirmed.
+    throw new RuntimeStartupError(signal?.aborted && cleanupConfirmed ? signal.reason : cause, cleanupConfirmed)
+  } finally {
+    signal?.removeEventListener("abort", cancel)
+  }
+}

@@ -1,0 +1,40 @@
+import { isAbsolute } from "node:path"
+
+// Mirrors the acceptanceCleanupPackage check in ../client/lib/config.mjs. The
+// managed entry builds its config directly, so the guard must be repeated here.
+const packagePath = /^\/(?:[^/\\\x00-\x1f]+\/)*[^/\\\x00-\x1f]+\.mgp$/
+
+export function validateStartInput(input) {
+  if (
+    !input ||
+    typeof input !== "object" ||
+    input.protocol !== 1 ||
+    !Number.isSafeInteger(input.generation) ||
+    input.generation < 1 ||
+    typeof input.chat !== "string" ||
+    !/^[a-zA-Z0-9_-]{1,160}$/.test(input.chat) ||
+    typeof input.stateDir !== "string" ||
+    !isAbsolute(input.stateDir)
+  )
+    throw Error("MEGALADATA_START_INVALID")
+  // Acceptance-only: the exact saved package the bridge closes during shutdown.
+  const cleanup = input.acceptanceCleanupPackage ?? null
+  const closeSavedPackageOnShutdown = input.closeSavedPackageOnShutdown === undefined ? false : input.closeSavedPackageOnShutdown
+  if (typeof closeSavedPackageOnShutdown !== "boolean" ||
+      (closeSavedPackageOnShutdown && (cleanup !== null || input.validation === true || input.chat === "readiness")))
+    throw Error("MEGALADATA_START_INVALID")
+  // Private launcher capability for temporary browser recovery; Help readiness
+  // and validation never control a Megaladata page, so they cannot carry it.
+  const browserRecovery = input.browserRecovery === undefined ? false : input.browserRecovery
+  if (typeof browserRecovery !== "boolean" || (browserRecovery && (input.validation === true || input.chat === "readiness")))
+    throw Error("MEGALADATA_START_INVALID")
+  if (
+    cleanup !== null &&
+    (typeof cleanup !== "string" ||
+      cleanup.length > 1024 ||
+      !packagePath.test(cleanup) ||
+      cleanup.split("/").some((segment) => segment === "." || segment === ".."))
+  )
+    throw Error("MEGALADATA_START_INVALID")
+  return { acceptanceCleanupPackage: cleanup, closeSavedPackageOnShutdown, browserRecovery }
+}

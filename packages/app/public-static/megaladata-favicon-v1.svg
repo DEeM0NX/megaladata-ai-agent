@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g id="tile">
+    <rect x="64" y="70" width="896" height="890" rx="124" fill="#000" opacity=".12"/>
+    <rect x="64" y="64" width="896" height="890" rx="124" fill="#FCFBFA"/>
+    <rect x="65" y="65" width="894" height="888" rx="123" fill="none" stroke="#D9D6D3" stroke-width="2"/>
+  </g>
+<g>
+  <!-- Compact frames keep the cyan M and drop the AI detail. -->
+  <g id="mark" transform="translate(512 512) scale(1.28) translate(-512 -414)" fill="none" stroke="#01A9C1" stroke-width="118" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2">
+    <polyline points="262 560 262 268 512 492 762 268 762 560"/>
+  </g>
+</g></svg>

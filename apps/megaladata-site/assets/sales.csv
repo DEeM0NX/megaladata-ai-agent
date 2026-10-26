@@ -1,0 +1,13 @@
+id;region;product;quantity;price
+1;Moscow;Laptop;2;70000
+2;Moscow;Monitor;3;25000
+3;Moscow;Keyboard;5;6000
+4;Saint Petersburg;Laptop;1;72000
+5;Saint Petersburg;Monitor;4;24000
+6;Saint Petersburg;Keyboard;6;5800
+7;Kazan;Laptop;2;68000
+8;Kazan;Monitor;2;23000
+9;Kazan;Keyboard;8;5500
+10;Novosibirsk;Laptop;1;69000
+11;Novosibirsk;Monitor;3;23500
+12;Novosibirsk;Keyboard;4;5700

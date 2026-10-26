@@ -1,0 +1,18 @@
+## Localization
+
+- NEVER hardcode user-visible English strings in production code. ALWAYS use an i18n key for component defaults, visible copy, placeholders, accessible labels, tooltips, dialogs, toasts, empty states, and displayed errors.
+- When migrating existing copy to i18n, preserve the English text byte-for-byte unless the task explicitly requests a copy change.
+- NEVER change existing English text or English keys to facilitate translation. English is intentional, designer-written source copy; adapt locale-specific translations and i18n mechanics around it.
+- Do not translate from model knowledge alone. Verify terminology and grammar with Unicode CLDR locale/plural data, Microsoft Localization Style Guides and terminology, Apple localization/style guidance and localized platform UI, Mozilla localization style guides, Mozilla Pontoon, and the Firefox localization corpus at `github.com/mozilla-l10n/firefox-l10n`.
+- For developer-facing terminology, prefer established usage in the target language's developer community over literal translations. Cross-check maintained Firefox, KDE, and VS Code localizations, using at least two independent corpora when available. Keep established English loanwords and acronyms instead of inventing unfamiliar terms.
+- Translate whole UI phrases in context rather than substituting glossary words. Audit recurring concepts for consistency and review every exact-English value; retain it only when it is an intentional product/provider/tool name, URL, code token, keyboard legend, acronym, asset name, or established borrowing.
+- Record the corpora used and flag uncertain or regional terminology in review notes.
+- Also use the relevant language authority or official dictionary for the locale (for example RAE/Fundéu, FranceTerme, Duden, TDK, Kotus/Kielitoimiston sanakirja, Språkrådet/Bokmålsordboka, Rada Języka Polskiego/PWN, the Russian and Arabic language academies, the Ukrainian Orthography, Taiwan MOE dictionaries, or the Royal Society of Thailand). Treat the English dictionary as the semantic source of truth and preserve placeholders, code identifiers, product names, and keyboard labels.
+
+## Megaladata branding
+
+- `src/v2/components/wordmark-v2.tsx` supplies the new-chat wordmark: visible text and accessible label must both be `Megaladata AI`. Keep `Megaladata` in currentColor at 12% fill opacity; render `AI` in the muted red `#C79292` at 32% fill opacity from the [official Megaladata brandbook](https://brandbook.megaladata.ru/color/index.html). Use fill-opacity on text/tspan, not parent opacity, so the accent opacity is independent. Preserve the scalable viewBox and uninterrupted accessible name.
+- `src/v2/components/wordmark-flow-v2.tsx` wraps the wordmark for the new chat: clicking `AI` plays one wave of data stars along a rightward directed graph on a Canvas beside the letters (`wordmark-flow-scene.ts` holds the DOM-free geometry and drawing). Keep it quiet: only currentColor and `#C79292`, `source-over` compositing, the `FLOW_ALPHA` caps, one wave at a time, `prefers-reduced-motion` renders a still frame that only fades. The resting accent keeps fill-opacity 0.32 (hover lifts it in CSS only), the svg stays `role="img"`, and the effect adds no user-visible strings.
+- `src/components/logo.tsx` supplies the full `Megaladata AI Agent` logo and mark/splash. These are separate components; inspect the actual caller when replacing branding.
+- Product names are intentional, untranslated brand text. Do not rename licensing/attribution references while changing visible branding.
+- Run `bun typecheck` here after component changes, and inspect the packaged desktop new-chat screen for visible spelling, clipping and contrast. See [desktop acceptance](../desktop/AGENTS.md).

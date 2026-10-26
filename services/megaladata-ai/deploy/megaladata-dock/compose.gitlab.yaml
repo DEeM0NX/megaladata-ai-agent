@@ -1,0 +1,50 @@
+# Apply after docker-compose.yml and compose.server.yaml.
+services:
+  openviking:
+    networks: [default, gitlab]
+    environment:
+      SSL_CERT_FILE: /etc/megaladata-dock/ca-bundle.crt
+      REQUESTS_CA_BUNDLE: /etc/megaladata-dock/ca-bundle.crt
+      GIT_SSL_CAINFO: /etc/megaladata-dock/ca-bundle.crt
+      GIT_CONFIG_SYSTEM: /etc/megaladata-dock/gitconfig
+      OPENVIKING_CLI_CONFIG_FILE: /etc/megaladata-dock/ovcli.conf
+      OPENVIKING_ASSETS_CREDENTIALS_FILE: /etc/megaladata-dock/assets-credentials.json
+    volumes:
+      - /opt/megaladata-dock/config/ca-bundle.crt:/etc/megaladata-dock/ca-bundle.crt:ro
+      - /opt/megaladata-dock/config/gitconfig:/etc/megaladata-dock/gitconfig:ro
+      - /opt/megaladata-dock/config/ovcli.conf:/etc/megaladata-dock/ovcli.conf:ro
+      - /opt/megaladata-dock/config/ovcli.settings.conf:/app/.openviking/ovcli.settings.conf:ro
+      - /opt/megaladata-dock/config/assets-credentials.json:/etc/megaladata-dock/assets-credentials.json:ro
+      - /opt/megaladata-dock/assets:/opt/megaladata-dock/assets
+
+  gitlab-gateway:
+    image: ${MEGALADATA_DOCK_CADDY_IMAGE:?Set a verified Caddy image digest}
+    networks:
+      gitlab:
+        aliases: [git.basegroup.ru]
+    volumes:
+      - /opt/megaladata-dock/config/Caddyfile.gitlab:/etc/caddy/Caddyfile:ro
+      - /opt/megaladata-dock/tunnel:/run/dock-tunnel:ro
+      - gitlab_tls:/data
+    restart: unless-stopped
+
+  gitlab-lfs-proxy:
+    image: ${MEGALADATA_DOCK_IMAGE:?Set the verified Dock image}
+    entrypoint: [python, -I, /opt/megaladata-dock/gitlab-lfs-proxy.py]
+    networks: [gitlab]
+    volumes:
+      - /opt/megaladata-dock/deploy-stage2/gitlab-lfs-proxy.py:/opt/megaladata-dock/gitlab-lfs-proxy.py:ro
+      - /opt/megaladata-dock/tunnel:/run/dock-tunnel:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+
+networks:
+  gitlab:
+    internal: true
+
+volumes:
+  gitlab_tls:

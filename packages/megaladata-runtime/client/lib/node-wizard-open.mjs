@@ -1,0 +1,94 @@
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const requireValue=(value,message)=>{if(!value)throw Error(message);};
+const question='Node configuration will cause its deactivation. Do you really want to start node configuration? Yes Yes, don\'t ask again No';
+
+// Only a settled opening gesture and a fresh owned surface can authorize
+// continuation. A missing/unknown browser reply never permits another click.
+export async function inspectPendingWizardOpen({operation,checkpoint,channel,readReceipt,readGraph,now,configurationObservation}) {
+ const state=operation.nodeApply,pending=state?.pending,step=channel?.lastPreparedStep,ref=operation.lastReceipt;
+ requireValue(checkpoint&&pending?.phase==='open'&&pending.receipt_id===operation.id+':open'
+  &&state.phases.at(-1)?.phase==='input_mapping'&&state.phases.every(p=>['source','workflow','target','input_mapping'].includes(p.phase))
+  &&state.execution.status==='not_requested'&&state.output.status==='not_refreshed'&&!operation.transportUncertain
+  &&now()<Math.min(state.deadline,state.configure_deadline,pending.deadline)
+  &&step?.step>checkpoint.step&&step.internal_operation_id===ref?.id&&step.signature===ref.signature
+  &&['click','right_click','begin_wizard','confirm_wizard_deactivation'].includes(step.action?.verb), 'Original settled open boundary required');
+ const response=await readReceipt(ref),r=response?.receipt;
+ requireValue(response?.state==='completed'&&r?.operation_id===ref.id&&r.action_key==='ui.act'
+  &&r.cleanup_complete===true&&(r.status==='SUCCEEDED'||r.effect_possible===false&&r.error?.code==='UI_EPOCH_CHANGED'),
+ 'Original open gesture has an unresolved effect');
+ const current=await channel.observe({condition:'original open recovery surface',ready:s=>s.wizard?.status==='absent'||s.wizard?.status==='observed'});
+ const n=current.prepared_node_context;
+ requireValue(n?.verified===true&&['document_id','workflow_id','node_id'].every(k=>n[k]===state.node?.[k]),'Original target node is absent or changed');
+ if(current.wizard.status==='absent'){
+  requireValue(n.surface==='graph'&&current.wizard_pending_owner?.status!=='observed'
+   &&r.status!=='SUCCEEDED'&&r.effect_possible===false,'Absent wizard requires a proved pre-gesture refusal');
+  requireValue(same(await readGraph(),checkpoint.graph),'Original source or target graph changed');
+  return {verified:true,wizard_open:false,receipt_id:ref.id};
+ }
+ requireValue(n.surface==='wizard'&&current.wizard.owner_context?.status==='observed','Original wizard ownership is not verified');
+ // The native wizard binding attests the original node object. The graph's
+ // DOM is hidden on this surface, so do not try to reopen it for a graph read.
+ const opened=await channel.observe(configurationObservation);
+ return {verified:true,wizard_open:true,receipt_id:ref.id,value:{verified:true,cleanup_complete:true,effect_possible:true,node_context:opened.prepared_node_context}};
+}
+
+export function wizardOpenBinding(state) {
+ const n=state.prepared_node_context;
+ requireValue(n?.verified===true&&n.surface==='graph'&&state.wizard?.status==='absent',
+  'A prepared graph node is required to open settings');
+ const controls=state.ui.elements.filter(e=>e.tid===n.tid+';Setting'&&e.wizard_open&&e.allowed_actions?.includes('begin_wizard'));
+ requireValue(controls.length===1,'One prepared settings control is required');
+ const labels=state.ui.elements.filter(e=>e.graph_node?.part==='label'&&e.tid===n.tid+';Label;Label');
+ return {...(labels.length===1&&typeof labels[0].label==='string'?{graph_label:labels[0].label}:{}),kind:'deactivation',node:{document_id:n.document_id,workflow_id:n.workflow_id,node_id:n.node_id},
+  graph_tid:n.tid,opening:structuredClone(controls[0].wizard_open)};
+}
+
+export function wizardDeactivationDialogOwner(state,binding) {
+ const n=state.prepared_node_context,ui=state.ui;
+ return binding?.kind==='deactivation'&&n?.verified===true&&n.surface==='graph'
+  &&n.tid===binding.graph_tid&&['document_id','workflow_id','node_id'].every(k=>n[k]===binding.node?.[k])
+  &&state.wizard?.status==='absent'&&state.wizard_pending_owner?.status==='observed'
+  &&(state.wizard_pending_owner.node?.tid===binding.opening?.workflow_path?.at(-1)?.tid+'>'+binding.opening?.node?.node_label
+    ||n.pending_wizard_node?.tid===state.wizard_pending_owner.node?.tid
+      &&typeof n.pending_wizard_node?.tid==='string'&&n.pending_wizard_node.label===state.wizard_pending_owner.node?.label)
+  &&same(state.wizard_pending_owner.path?.slice(0,-2).map(({tid,label})=>({tid,label})),binding.opening?.workflow_path)
+  &&Array.isArray(ui?.dialogs)&&ui.dialogs.length===1&&Array.isArray(ui.masks)
+  &&ui.masks.every(m=>m.kind==='modal_background'&&m.target_tid===binding.graph_tid.split(';Graph;')[0]&&m.dialog_ref===null);
+}
+
+export function boundWizardDeactivationConfirmation(state,binding,requireControls=true) {
+ if(!wizardDeactivationDialogOwner(state,binding))return false;
+ const ui=state.ui,d=ui.dialogs[0],title='Megaladata '+state.megaladata_build;
+ if(d.title!==title||d.text!==title+' '+question)return false;
+ return !requireControls||Object.entries({yes:'Yes',no:'Yes, don\'t ask again',cancel:'No'}).every(([name,label])=>
+  ui.elements.filter(e=>e.tid==='msgbox;tlb;'+name&&e.label===label&&e.signature?.dialog_ref===d.ref
+    &&e.allowed_actions?.includes('click')).length===1);
+}
+
+export async function openPreparedWizard(channel) {
+ let s=await channel.observe({condition:'prepared node settings available',ready:s=>s.prepared_node_context?.surface==='graph'
+  &&s.wizard?.status==='absent'&&s.ui.elements.some(e=>e.tid===s.prepared_node_context.tid+';Setting'&&e.allowed_actions?.includes('begin_wizard'))});
+ const binding=wizardOpenBinding(s);
+ await channel.perform({condition:'open settings of the prepared node',initialObservation:s,
+  ready:s=>same(wizardOpenBinding(s),binding),identity:()=>binding,
+  resolve:s=>({verb:'begin_wizard',ref:s.ui.elements.find(e=>e.tid===binding.graph_tid+';Setting').ref})});
+ s=await channel.observe({condition:'prepared wizard or exact deactivation question',wizardConfirmation:binding,
+  ready:s=>s.wizard?.status==='observed'&&s.prepared_node_context?.surface==='wizard'
+    ||boundWizardDeactivationConfirmation(s,binding)});
+ const deactivationRequired=s.wizard.status==='absent';
+ if(deactivationRequired)await channel.perform({condition:'confirm only this node deactivation',initialObservation:s,
+  ready:s=>boundWizardDeactivationConfirmation(s,binding),identity:()=>binding,
+  resolve:s=>({verb:'confirm_wizard_deactivation',ref:s.ui.elements.find(e=>e.tid==='msgbox;tlb;yes').ref})});
+ const after=await channel.observe({condition:'prepared node wizard opened',ready:s=>s.wizard?.status==='observed'
+  &&s.wizard.owner_context?.status==='observed'&&s.prepared_node_context?.surface==='wizard'});
+ const owner=after.wizard.owner_context;
+ const n=after.prepared_node_context,normalize=v=>typeof v==='string'?v.replace(/\s/g,''):'';
+ const bound=n?.verified===true&&n.surface==='wizard'&&['document_id','workflow_id','node_id'].every(k=>typeof n[k]==='string'&&n[k]===binding.node[k]);
+ const ownerMatches=owner.node.tid===binding.opening.workflow_path.at(-1)?.tid+'>'+binding.opening.node.node_label
+  ||normalize(binding.graph_label)!==''&&normalize(binding.graph_label)===normalize(owner.node.label);
+ requireValue(bound&&ownerMatches
+  &&same(owner.path.slice(0,-2).map(({tid,label})=>({tid,label})),binding.opening.workflow_path),
+  'Opened wizard owner differs from the prepared node');
+ return {verified:true,deactivation_required:deactivationRequired,node_context:after.prepared_node_context,
+  owner,settings_applied:false,execution_started:false};
+}

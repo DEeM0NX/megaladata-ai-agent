@@ -1,0 +1,65 @@
+import { EventEmitter } from "node:events"
+import type { Port } from "@megaladata-ai-agent/megaladata-host/transport"
+
+export function workerMegaladataBridge(send: (data: unknown) => void) {
+  const events = new EventEmitter()
+  const state = { closed: false }
+  const port: Port = {
+    postMessage(data) {
+      if (state.closed) throw new Error("MEGALADATA_HOST_CLOSED")
+      send(data)
+    },
+    on: (event, listener) => {
+      events.on(event, listener)
+    },
+    onClose(listener) {
+      if (state.closed) {
+        listener()
+        return
+      }
+      events.on("close", listener)
+    },
+    start() {},
+  }
+  return {
+    port,
+    receive(input: { data?: unknown; closed?: boolean }) {
+      if (state.closed) return
+      if (input.closed) {
+        state.closed = true
+        events.emit("close")
+        return
+      }
+      events.emit("message", { data: input.data })
+    },
+  }
+}
+
+export function parentMegaladataBridge(
+  port: Port,
+  worker: {
+    send(input: { data?: unknown; closed?: boolean }): Promise<unknown>
+    subscribe(listener: (data: unknown) => void): () => void
+  },
+) {
+  const state = { closed: false }
+  const unsubscribe = worker.subscribe((data) => {
+    if (state.closed) return
+    try {
+      port.postMessage(data)
+    } catch {
+      close()
+    }
+  })
+  function close() {
+    if (state.closed) return
+    state.closed = true
+    unsubscribe()
+    void worker.send({ closed: true }).catch(() => {})
+  }
+  port.on("message", ({ data }) => {
+    if (!state.closed) void worker.send({ data }).catch(close)
+  })
+  port.onClose?.(close)
+  return { close }
+}

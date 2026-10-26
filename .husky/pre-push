@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+bun run secrets push "$1"
+# Check if bun version matches package.json
+# keep in sync with packages/script/src/index.ts semver qualifier
+bun -e '
+import { semver } from "bun";
+const pkg = await Bun.file("package.json").json();
+const expectedBunVersion = pkg.packageManager?.split("@")[1];
+if (!expectedBunVersion) {
+  throw new Error("packageManager field not found in root package.json");
+}
+const expectedBunVersionRange = `^${expectedBunVersion}`;
+if (!semver.satisfies(process.versions.bun, expectedBunVersionRange)) {
+  throw new Error(`This script requires bun@${expectedBunVersionRange}, but you are using bun@${process.versions.bun}`);
+}
+if (process.versions.bun !== expectedBunVersion) {
+  console.warn(`Warning: Bun version ${process.versions.bun} differs from expected ${expectedBunVersion}`);
+}
+'
+if [ "${MEGALADATA_NODE_WORKFLOW:-}" = cli ]; then
+  export PATH="$PWD/packages/agent/node_modules/.bin:$PATH"
+  echo "Checking CLI packages: Core, Agent, Host"
+  (cd packages/core && bun typecheck)
+  (cd packages/agent && bun typecheck)
+  (cd packages/megaladata-host && bun typecheck)
+else
+  bun typecheck
+fi

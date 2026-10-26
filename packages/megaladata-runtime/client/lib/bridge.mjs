@@ -1,0 +1,645 @@
+import {nodeResultReply} from './node-result-reply.mjs';
+import {boundedUserToolReply} from './user-response-budget.mjs';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { readCatalog, combineCatalogs, connectRemote, selectToolGroups } from './catalog.mjs';
+import { makeClipboardCode, runClipboardTransfer, createSerialGate, clipboardTool } from './clipboard.mjs';
+import { createSkillLoader, prepareTool } from './skill.mjs';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import {randomUUID} from 'node:crypto';
+import { openArchive } from './archive.mjs';
+import { diagnoseConnection } from './diagnostics.mjs';
+import { pinBundledActionCatalog, assertCatalogTarget, validateActionParameters } from './action-catalog.mjs';
+import { createActionRuntime, parseCapabilityResult } from './executor.mjs';
+import {createCandidateNodeSupport} from './node-support.mjs';
+import {isNodeApiTool,dispatchNodeApi} from './node-api.mjs';
+import { makeWorkspacePrepareCode, parseWorkspacePreparation, prepareWorkspaceSession, requirePreparedWorkspace, workspaceObserveTool } from './workspace.mjs';
+import { makeBrowserGeometryCode, parseBrowserGeometry } from './browser-geometry.mjs';
+import { createExecutionJournal } from './execution-journal.mjs';
+import {createRedactor} from './redact.mjs';
+import {javascriptSourceReceiptSchema} from './javascript-source-read-schema.mjs';
+import {javascriptContextReceiptSchema} from './javascript-context-read.mjs';
+import { createRecoveryContext } from './recovery-context.mjs';
+import { outcomeVerification } from './outcome-verification.mjs';
+import { createHostArtifactAdmission, codexInputIdentity } from './host-artifacts.mjs';
+import { compactActionResult, compactNodeRequestFailure, userResultSchema, compactKnowledgeBundle } from './user-results.mjs';
+import { recordLocalDiagnostics } from './local-diagnostics.mjs';
+import { createUserWorkflowBindings, userNodeTool, userActionTool, userActionInventory } from './user-workflow.mjs';
+import { makePackageCleanupCode, parsePackageCleanupResult } from './package-cleanup.mjs';
+import {makeSavedPackageStateCode,parseSavedPackageState,savedPackageStateAdvice} from './package-persistence.mjs';
+import { createStorageBinding, requireStorageDestination, withStorageIdentity } from './storage-policy.mjs';
+import { createBrowserRecovery, makeRecoveryPageProbeCode, parseRecoveryPageProbe } from './browser-recovery.mjs';
+
+// Keep the runtime receipt byte-for-byte meaningful to reconciliation/journal
+// consumers; recovery advice is a separate MCP content block, never an effect.
+export function actionReply(outcome, { observe = false, userProfile = false } = {}) {
+  // A rejected observation/action did not start a browser effect. The known
+  // worker remains in control; do not turn ordinary waiting into recovery.
+  if(userProfile&&outcome.request_rejected===true&&outcome.output?.active_node_job?.state==='running'
+    &&typeof outcome.output.active_node_job.operation_id==='string'&&outcome.output.active_node_job.operation_id){
+    const result=compactNodeRequestFailure(outcome);
+    return {content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result};
+  }
+  const content = [{ type: 'text', text: JSON.stringify(outcome) }];
+  const output = outcome.output;
+  if (observe && outcome.status === 'SUCCEEDED' && typeof output?.observation_id === 'string'
+      && output.observation_id && Array.isArray(output.ui?.elements)) {
+    const usage = { kind: 'dock_observation_usage', observation_id: output.observation_id,
+      receipt_id_usage: 'The first block operation_id identifies the browser receipt, never an observation_id alias.',
+      reference_usage: 'Only refs delivered in ui.elements for this observation can be used. Metadata refs alone are not issued. A delivered element permits only its allowed_actions; region refs with no actions are read-only roots. Fresh observation IDs do not authorize old refs.',
+      ...(typeof output.page?.next_cursor === 'string' && output.page.next_cursor
+        ? { next_page_arguments: { cursor: output.page.next_cursor } } : {}),
+    };
+    if (output.observation_kind === 'roots') {
+      usage.root_read_arguments = output.ui.elements.filter(element => element.kind === 'region'
+        && typeof element.ref === 'string' && /^ui-[a-zA-Z0-9-]{1,124}$/.test(element.ref)
+        && Array.isArray(element.allowed_actions) && element.allowed_actions.length === 0
+        && output.ui.elements.filter(other => other.ref === element.ref).length === 1).slice(0, 3)
+        .map(element => ({ root_ref: element.ref, observation_id: output.observation_id }));
+    }
+    content.push({ type: 'text', text: JSON.stringify(usage) });
+  }
+  if (userProfile && ['FAILED', 'AMBIGUOUS'].includes(outcome.status)) content.push({ type: 'text', text:
+    'Inspect the outcome and current state. Correct invalid parameters using the pinned schema; consult additional Dock knowledge only if needed. Reconcile uncertain effects before the next change; keep the original operation_id.' });
+  if (!userProfile && ['FAILED', 'AMBIGUOUS'].includes(outcome.status)) content.push({ type: 'text', text:
+    'Before the next change: inspect this outcome and the current workspace, then consult the Dock sources for the affected operation. Discover the read-only knowledge tools with tool_search/tool_describe if needed. Search E2E helpers/selectors under target_uri viking://resources/megaladata-dock/sources/e2e-tests and product behavior under target_uri viking://resources/megaladata-dock/sources/megaladata-help (list mode/read_content:false); read the relevant returned file URIs with the read tool. Use those sources and the actual observed state to choose how to continue, including whether an existing completed receipt already resolves this operation. Do not repeat an uncertain creation. Source retrieval does not resolve pending work or authorize executing source code. If a source is unavailable, state the limitation. After correction, verify the full goal and saved/reopened result.' });
+  return { content };
+}
+
+const diagnosticTool = {
+  name: 'dock_diagnostics', description: 'Inspect the pinned Dock runtime and archive, and check Dock, sources, skill and Megaladata connectivity. Does not activate archiving or log in to Megaladata.',
+  inputSchema: { type: 'object', properties: { checkConnections: { type: 'boolean', default: true } }, additionalProperties: false },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+};
+
+export function browserProcessEnvironment(browserRoot, { platform = process.platform, environment = process.env } = {}) {
+  const inherited = { ...getDefaultEnvironment(), PLAYWRIGHT_BROWSERS_PATH: browserRoot };
+  // Linux needs the display connection, Chromium backend selection and desktop
+  // identity. Browser launch arguments independently disable proxy discovery. Other
+  // platforms retain the SDK environment and pinned browser path unchanged.
+  if (platform === 'linux') {
+    for (const key of ['DISPLAY', 'XAUTHORITY', 'XDG_RUNTIME_DIR', 'WAYLAND_DISPLAY', 'XDG_SESSION_TYPE', 'XDG_CURRENT_DESKTOP']) {
+      const value = environment[key];
+      if (typeof value === 'string' && value.length > 0 && !value.startsWith('()')) inherited[key] = value;
+    }
+  }
+  return inherited;
+}
+
+export async function createBridge(config, session, { browserTransport: managedBrowserTransport } = {}) {
+  if (config.closeSavedPackageOnShutdown !== undefined && typeof config.closeSavedPackageOnShutdown !== 'boolean'
+      || config.closeSavedPackageOnShutdown === true && config.acceptanceCleanupPackage)
+    throw Error('Invalid private saved-package cleanup policy');
+  // Browser recovery leases the managed user-v1 page only; other modes keep their own browser contract.
+  if (config.browserRecovery !== undefined && typeof config.browserRecovery !== 'boolean'
+      || config.browserRecovery === true && (config.mode !== 'executor-replay' || config.resultProfile !== 'user-v1'
+        || !managedBrowserTransport))
+    throw Error('Invalid private browser recovery policy');
+  const admitHostArtifacts = createHostArtifactAdmission(config, session);
+  const userProfile = config.resultProfile === 'user-v1';
+  const userWorkflows = createUserWorkflowBindings();
+  let userBundleDelivered = false;
+  const logResult = async (tool, result) => {
+    if (!userProfile || session.metadata.workspaceReady !== true) return;
+    // The source receipt is delivered only to the caller. A diagnostics copy
+    // would retain exact executable text outside the owned source-read record.
+    if(tool==='dock_node_read'&&['source','context'].includes(result?.kind))return;
+    try { await recordLocalDiagnostics(config.stateDir, 'dock:' + session.metadata.sessionId,
+      [{ event: 'tool.full_result', tool_name: tool, dock_session_id: session.metadata.sessionId, host_pid: process.pid, result }],
+      { knownSecrets: [config.apiKey] }); }
+    catch { session.metadata.localDiagnosticsIncomplete = true; }
+  };
+  let remote;
+  const browser = new Client({ name: 'megaladata-dock-browser', version: session.metadata.client });
+  const remoteTransport = () => new StreamableHTTPClientTransport(new URL(config.endpoint), {
+    requestInit: { headers: { Authorization: `Bearer ${config.apiKey}` }, redirect: 'error' },
+  });
+  const browserTransport = managedBrowserTransport ?? new StdioClientTransport({
+    command: process.execPath,
+    args: [session.browserCli, '--config', session.browserConfig],
+    env: browserProcessEnvironment(session.browserRoot),
+    cwd: session.directory, stderr: 'pipe',
+  });
+  // The pinned SDK emits transport.onclose from the child-process 'close'
+  // event. Protocol.connect chains any existing callback, so install ours first.
+  let browserProcessTerminated = false, resolveBrowserExit;
+  const browserExited = new Promise(resolve => { resolveBrowserExit = resolve; });
+  browserTransport.onclose = () => { browserProcessTerminated = true; resolveBrowserExit(); };
+  const awaitBrowserExit = async () => {
+    if (browserProcessTerminated) return;
+    let timer;
+    try { await Promise.race([browserExited, new Promise(resolve => { timer = setTimeout(resolve, 1000); })]); }
+    finally { clearTimeout(timer); }
+  };
+  // Browser stderr may contain page details; never persist or forward it to logs.
+  browserTransport.stderr?.on('data', () => {});
+  const closeClients = () => Promise.allSettled([remote?.close(), browser.close()]);
+  const browserGate = createSerialGate();
+  const heldLeases = new Set();
+  const savedPackages = new Map();
+  const saveAdmissions = new Map();
+  let saveSequence=0;
+  let lastSavedPackage = null;
+  let closing, shutdownStarted = false;
+  const skill = createSkillLoader({ resources: config.resources });
+  let clipboardUncertain = false;
+  let actionRuntime = null;
+  let pinnedActions = null;
+  let recoveryContext = null;
+  const redactor=createRedactor([config.apiKey]);
+  const recordExecution = createExecutionJournal({ directory: session.directory,
+    metadata: session.metadata, redactor });
+  try {
+    const connections = await Promise.allSettled([connectRemote(() => ({ client: new Client({ name: 'megaladata-dock', version: session.metadata.client }), transport: remoteTransport() })).then(client => { remote = client; }), browser.connect(browserTransport)]);
+    const failed = connections.find(result => result.status === 'rejected');
+    if (failed) throw failed.reason;
+    const [remoteTools, browserTools] = await Promise.all([readCatalog(remote), readCatalog(browser)]);
+    if (!browserTools.some(tool => tool.name === 'browser_run_code_unsafe')) {
+      throw new Error('The pinned browser runtime lacks the verified clipboard execution tool');
+    }
+    if (['executor-preview', 'executor-replay'].includes(config.mode)) {
+      const replay = config.mode === 'executor-replay';
+      const pinned = await pinBundledActionCatalog();
+      pinnedActions = pinned;
+      recoveryContext = createRecoveryContext({ remote, pinned, knownSecrets: [config.apiKey] });
+      Object.assign(session.metadata, pinned.pins);
+      actionRuntime = createActionRuntime({ pinned,
+        ...(replay?createCandidateNodeSupport({targetOrigin:config.megaladataUrl?new URL(config.megaladataUrl).origin:undefined,targetBuild:pinned.compatibility?.megaladata_build,storageDirectories:config.storageDirectories,redactor}):{}),
+        getStorageBinding: () => session.metadata.storageBinding ?? null,
+        getNodeContractPins: () => ({...pinned.pins, skillRevision:session.metadata.skillRevision, megaladataProfile:session.metadata.targetIdentity ?? pinned.compatibility}),
+        artifactStore:session.artifactStore, allowCandidate: replay, onRecord: recordExecution, redactor,
+        browserRecovery: config.browserRecovery === true && userProfile,
+        targetOrigin: config.megaladataUrl ? new URL(config.megaladataUrl).origin : undefined, execute: async (code, options) => {
+        const response = await browser.callTool({ name: 'browser_run_code_unsafe', arguments: {
+          code: config.storageDirectories ? withStorageIdentity(code, session.metadata.storageBinding) : code,
+        } }, undefined, options);
+        return parseCapabilityResult(response);
+      } });
+    }
+    const groups = selectToolGroups(config.mode ?? 'classic', {
+      remoteTools, browserTools,
+      commonLocalTools: [diagnosticTool, clipboardTool, prepareTool],
+      executorLocalTools: [diagnosticTool, prepareTool, workspaceObserveTool, ...(actionRuntime?.tools ?? [])],
+    });
+    if (userProfile) {
+      groups.remote=groups.remote.filter(tool=>['find','search','read','grep','glob','list','tree'].includes(tool.name));
+      groups.local=groups.local.filter(tool=>!['dock_ui_action','dock_artifact_upload','dock_artifact_verify'].includes(tool.name))
+        .map(tool=>isNodeApiTool(tool.name)?{...userNodeTool(tool),outputSchema:tool.name==='dock_node_read'
+          ?{type:'object',properties:{...userResultSchema.properties,...javascriptSourceReceiptSchema.properties,
+              ...javascriptContextReceiptSchema.properties,kind:{enum:['source','context']}},
+            additionalProperties:false,oneOf:[userResultSchema,javascriptSourceReceiptSchema,javascriptContextReceiptSchema]}:userResultSchema}:userActionTool(tool));
+    }
+    const catalog = combineCatalogs(groups);
+    if (actionRuntime) {
+      catalog.routes.set('dock_action_describe', 'action');
+      catalog.routes.set('dock_action_run', 'action');
+      catalog.routes.set('dock_workspace_observe', 'action');
+      for (const name of ['dock_operation_inspect', 'dock_operation_recover', 'dock_ui_action', 'dock_artifact_upload', 'dock_artifact_verify'])
+        if(catalog.tools.some(t=>t.name===name))catalog.routes.set(name,'action');
+      for(const tool of actionRuntime.tools.filter(tool=>isNodeApiTool(tool.name)))catalog.routes.set(tool.name,'action');
+    }
+    await session.save(catalog);
+    // The recovery lease is a temporary part of the catalog outside its hashed static tools.
+    // T4 for saves: a confirmed Save whose package state could not be read. The
+    // runtime rereads path and dirty state itself after the model's browser work.
+    const saveRecoveries = new Map();
+    const readSavedState = async save => {
+      const prepared = session.metadata.workspacePreparation?.state;
+      const options = { sessionId: session.metadata.sessionId, documentId: prepared?.document_id,
+        account: prepared?.megaladata_account ?? config.replayLoginUser, packagePath: save.path,
+        megaladataUrl: config.megaladataUrl, megaladataBuild: session.metadata.targetIdentity.megaladata_build };
+      const response = await browser.callTool({ name: 'browser_run_code_unsafe',
+        arguments: { code: makeSavedPackageStateCode(options) } }, undefined, { timeout: 15000 });
+      return parseSavedPackageState(response, options);
+    };
+    const recoveryExecutor = actionRuntime && {
+      browserRecoveryBasis(operationId) {
+        const save = saveRecoveries.get(operationId);
+        if (!save) return actionRuntime.browserRecoveryBasis(operationId);
+        if (actionRuntime.hasUnsettledWork()) throw new Error('Another Dock operation is unsettled; resolve it before browser recovery');
+        return { reason: 'SAVE_STATE_UNCONFIRMED', step: { key: ['save', save.document_id, save.path].join('|'), kind: 'save',
+          document_id: save.document_id, path: save.path }, goal: { package_path: save.path,
+          required_result: 'The save receipt is valid, but the open package state could not be read. Remove what blocks the '
+            + 'scenario (dialogs, masks, notifications) and return to the saved package graph. Do not save or change the package.' } };
+      },
+      async browserRecoveryHandoff(operationId) {
+        if (!saveRecoveries.has(operationId)) return actionRuntime.browserRecoveryHandoff(operationId);
+        return actionRuntime.hasUnsettledWork() ? { stopped: false, reason: 'Another Dock operation is unsettled' }
+          : { stopped: true, proof: { receipt_state: 'save_settled' } };
+      },
+      async verifyBrowserRecovery(input) {
+        const save = saveRecoveries.get(input.operationId);
+        if (input.step.kind !== 'save' || !save) return actionRuntime.verifyBrowserRecovery(input);
+        const state = await readSavedState(save).catch(error => ({ error: String(error.message).slice(0, 500) }));
+        if (state.error || typeof state.modified !== 'boolean')
+          return { status: 'unresolved', facts: [], reason: state.error ?? 'Saved package state unavailable' };
+        const receipt = { id: input.operationId + ':br-save', kind: 'browser_recovery', status: state.modified ? 'continuable' : 'completed',
+          source_operation_id: input.operationId, step: structuredClone(input.step), state, attested_by_model: input.attested,
+          facts: ['saved_package_path_observed', state.modified ? 'package_modified_after_save' : 'package_unmodified_after_save'] };
+        await recordExecution({ phase: 'browser_recovery_receipt', operation_id: input.operationId, receipt });
+        saveRecoveries.delete(input.operationId);
+        return { status: receipt.status, facts: receipt.facts, receipt_id: receipt.id, state,
+          next_step: state.modified ? { tool: 'dock_action_run', instruction: 'The open package has changes after the save. '
+            + 'Save it again with package.save_checkpoint, the same path and a NEW operation_id.' }
+            : { tool: 'dock_action_run', instruction: 'The saved package is confirmed unmodified. Continue the task.' } };
+      },
+      stopBrowserRecovery(input) {
+        return saveRecoveries.has(input.operationId) ? { state: 'retained', reason: 'The save receipt remains valid; its package state stays unconfirmed.' }
+          : actionRuntime.stopBrowserRecovery(input);
+      },
+    };
+    const recovery = createBrowserRecovery({ enabled: config.browserRecovery === true && !!actionRuntime && userProfile,
+      browser, executor: recoveryExecutor, gate: browserGate, record: recordExecution,
+      async probe() {
+        const binding = { origin: new URL(config.megaladataUrl).origin,
+          documentId: session.metadata.workspacePreparation?.state?.document_id,
+          tabTid: session.metadata.workspacePreparation?.state?.workflow_ref?.tab_tid ?? null };
+        const response = await browser.callTool({ name: 'browser_run_code_unsafe',
+          arguments: { code: makeRecoveryPageProbeCode(binding) } }, undefined, { timeout: 15000 });
+        return parseRecoveryPageProbe(response, binding);
+      } });
+    // A Dock request may wait in the gate while a recovery action settles: recheck the lease inside it.
+    const dockGate = (name, operation) => browserGate(async () => {
+      if (recovery.refusesDock(name))
+        throw new Error('Browser recovery holds the page. Finish or stop dock_browser_recovery before further Dock actions.');
+      return operation();
+    });
+    const server = new Server({ name: 'megaladata-dock', version: session.metadata.client }, {
+      capabilities: { tools: {} },
+      instructions: 'To create, change or execute a scenario, first activate the bundled megaladata-automation skill. Browser Megaladata tools are available after activation. Help, diagnostics, and package reports do not require dock_prepare; use package-docs for local package reports. ' + (userProfile ? 'Call dock_prepare, then get the selected node parameter schema with dock_action_describe. Use dock_artifact_deliver for attachments and dock_node_apply for each complete node lifecycle. Keep issued identities and wait on the original operation_id. Follow next_step on failure; inspect uncertain effects before continuing. Save the package at the end. Low-level UI actions are unavailable in this profile.' : ['executor-preview', 'executor-replay'].includes(config.mode)
+        ? `This process is pinned to ${config.mode}. Call dock_prepare. Plan and complete the user's goal using verified actions plus dock_workspace_observe and bounded dock_ui_action gestures. An action failure is feedback: inspect, diagnose, repair in this same session, verify and continue. For AMBIGUOUS call dock_operation_inspect; bind UI repairs to the pending operation or use dock_operation_recover. Never bypass uncertain in-flight work with a new ID. Raw JavaScript/browser tools are unavailable; the mode cannot change during this session.`
+        : 'Call dock_prepare for scenario work after skill activation. It returns dynamic readiness, input artifacts and local skill pins. Dock provides shared knowledge and a local browser. Source files and live DOM take precedence over recalled context. All clipboard copy/paste must use dock_clipboard_transfer so other Dock sessions cannot overwrite it during the operation. The installed native adapter activates shared session archiving after successful preparation. Check dock_diagnostics for actual archive activation and delivery state.'),
+    });
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...structuredClone(catalog.tools), ...recovery.listTools(browserTools)] }));
+    const callTool = async (request, extra) => {
+      if (shutdownStarted) throw new McpError(ErrorCode.InvalidRequest, 'Dock shutdown has started');
+      if (recovery.owns(request.params.name)) {
+        requirePreparedWorkspace(session.metadata);
+        return recovery.call(request.params.name, request.params.arguments, extra);
+      }
+      if (recovery.refusesDock(request.params.name))
+        return { isError: true, content: [{ type: 'text', text: 'Browser recovery holds the page. Finish or stop dock_browser_recovery before further Dock actions.' }] };
+      const owner = catalog.routes.get(request.params.name);
+      if (!owner) throw new McpError(ErrorCode.InvalidParams, 'Unknown Dock tool');
+      if (request.params.name === 'dock_diagnostics') {
+        let archive = null;
+        try { archive = JSON.parse(await readFile(join(session.directory, 'archive.json'), 'utf8')); } catch {}
+        if (archive?.serverSession) {
+          const queue = await openArchive(config);
+          try {
+            archive.delivery = queue.deliveryStatus(archive.serverSession);
+            archive.pendingEvents = archive.delivery.pending_events;
+            archive.installationPendingEvents = queue.pendingCount();
+          }
+          finally { queue.close(); }
+        }
+        session.metadata.archiveActive = archive?.active === true;
+        const connection = request.params.arguments?.checkConnections === false ? null : await diagnoseConnection(config);
+        return { content: [{ type: 'text', text: JSON.stringify({
+        ...session.metadata, endpoint: config.endpoint, megaladataUrl: config.megaladataUrl, toolCatalogSha256: catalog.sha256,
+        remoteTools: remoteTools.length, browserTools: browserTools.length,
+        clipboardTransferAvailable: !actionRuntime, clipboardUncertain, archive, connection,
+      }) }] };
+      }
+      try {
+        if (request.params.name === 'dock_prepare') {
+          let args = request.params.arguments ?? {};
+          validateActionParameters(prepareTool.inputSchema, args);
+          if (userProfile) args = userWorkflows.normalizePreparation(args);
+          await admitHostArtifacts(args.host_context_token, codexInputIdentity(request.params));
+          const preparationRequest = { operation_id: args.operation_id ?? 'prepare', intent: args.intent ?? 'new_draft',
+            package_path: args.package_path ?? null, workflow_ref: args.workflow_ref ?? null };
+          if (config.storageDirectories && preparationRequest.package_path)
+            requireStorageDestination(preparationRequest.package_path, config.storageDirectories, 'packages');
+          const workspaceOptions = actionRuntime ? { megaladataUrl: config.megaladataUrl,
+            compatibility: pinnedActions.compatibility, sessionId: session.metadata.sessionId,
+            operationId: preparationRequest.operation_id, intent: preparationRequest.intent,
+            packagePath: preparationRequest.package_path, workflowRef: preparationRequest.workflow_ref, timeoutMs: args.timeout_ms ?? 120000,
+            allowTestLogin: config.mode === 'executor-replay' && config.replayBootstrap, testLoginUser: config.replayLoginUser } : null;
+          if (workspaceOptions) makeWorkspacePrepareCode(workspaceOptions);
+          const prepared = await skill.prepare();
+          session.metadata.skillRevision = prepared.detail.revision;
+          session.metadata.skillPath = prepared.directory;
+          let workspace = null;
+          if (actionRuntime) {
+            workspace = await dockGate(request.params.name, async () => {
+              const state = await prepareWorkspaceSession({ metadata: session.metadata,
+              request: preparationRequest, signal: extra.signal,
+              assertAllowed() { extra.signal.throwIfAborted(); actionRuntime.assertPreparationAllowed(); },
+              async prepare({ recoverOnly }) {
+                if (!config.megaladataUrl) throw new Error('Workspace preparation requires the configured Megaladata URL');
+                const code = makeWorkspacePrepareCode({ ...workspaceOptions, recoverOnly });
+                const response = await browser.callTool({ name: 'browser_run_code_unsafe', arguments: { code } }, undefined, { timeout: 125000 });
+                const state = parseWorkspacePreparation(response);
+                if (state.status === 'READY') {
+                  if (config.storageDirectories) session.metadata.storageBinding = createStorageBinding({
+                    sessionId: session.metadata.sessionId, origin: new URL(config.megaladataUrl).origin,
+                    build: state.target.megaladata_build, documentId: state.document_id,
+                    account: state.megaladata_account, directories: config.storageDirectories,
+                  });
+                  const geometry = await browser.callTool({ name: 'browser_run_code_unsafe', arguments: {
+                    code: makeBrowserGeometryCode({ session_id: session.metadata.sessionId,
+                      operation_id: state.operation_id, document_id: state.document_id,
+                      runtime_revision: session.metadata.clientRevision,
+                      manifest_sha256: session.metadata.actionManifestDigest,
+                      workflow_ref: state.workflow_ref }),
+                  } }, undefined, { timeout: 15000 });
+                  state.browser_geometry = parseBrowserGeometry(geometry);
+                }
+                return state;
+              },
+              assertTarget: target => assertCatalogTarget(pinnedActions, target), record: recordExecution,
+              save: () => session.save(catalog),
+              });
+              if (userProfile && session.metadata.workspaceReady === true) userWorkflows.remember(state);
+              return state;
+            });
+          }
+          if (!actionRuntime) await session.save(catalog);
+          if (userProfile && actionRuntime) {
+            const first = !userBundleDelivered;
+            const ready = session.metadata.workspaceReady === true;
+            const bundle = first ? compactKnowledgeBundle(actionRuntime.describe({
+              action_keys: ['package.save_checkpoint'],
+              node_types: actionRuntime.describe().available_node_types,
+            })) : null;
+            const result = { prepared: ready, sessionId: session.metadata.sessionId, skillRevision: prepared.detail.revision,
+              source: prepared.detail.source,
+              megaladataUrl: config.megaladataUrl, workspace, result_version: 'user-v1', input_artifacts: session.artifactStore.list(),
+              ...(config.storageDirectories ? { storage_directories: config.storageDirectories } : {}),
+              knowledge: bundle ?? { reused: true, skillRevision: prepared.detail.revision } };
+            await logResult('dock_prepare', result);
+            const reply=boundedUserToolReply({content:[{type:'text',text:JSON.stringify(result)}]},{tool:'dock_prepare'});
+            if (ready && reply.isError !== true) userBundleDelivered = true;
+            return reply;
+          }
+          return { content: [{ type: 'text', text: JSON.stringify({
+            prepared: !actionRuntime || session.metadata.workspaceReady === true, sessionId: session.metadata.sessionId,
+            megaladataUrl: config.megaladataUrl, workspace,
+            ...(actionRuntime ? { executor: actionRuntime.describe(), input_artifacts: session.artifactStore.list() } : {}),
+            skillRevision: prepared.detail.revision, skillPath: prepared.directory,
+            source: prepared.detail.source, archiveActive: session.metadata.archiveActive,
+          }) }] };
+        }
+        if (owner === 'action') {
+          if(isNodeApiTool(request.params.name)) {
+            const invoke=async()=>{
+              requirePreparedWorkspace(session.metadata);
+              let args=request.params.arguments??{};
+              if(userProfile && ['dock_node_apply','dock_node_resume','dock_node_read'].includes(request.params.name)) {
+                validateActionParameters(userNodeTool(actionRuntime.tools.find(tool=>tool.name===request.params.name)).inputSchema,args);
+                if(request.params.name==='dock_node_apply')args=userWorkflows.expandNode(args);
+                if(request.params.name==='dock_node_read')args=userWorkflows.expandNodeRead(args);
+              }
+              const result=await dispatchNodeApi(actionRuntime,request.params.name,args,{signal:extra.signal});
+              if(userProfile)userWorkflows.rememberDelivery(result,args);
+              await logResult(request.params.name,result);
+              return nodeResultReply(result,{userProfile});
+            };
+            // Local lifecycle calls must remain available while another request is
+            // awaiting browser work. The runtime owns exclusion through cleanup.
+            const local=['dock_node_status','dock_node_wait','dock_node_cancel','dock_node_stop','dock_artifact_delivery_status'].includes(request.params.name);
+            return await (local?invoke():dockGate(request.params.name,invoke));
+          }
+          if (request.params.name === 'dock_action_describe') {
+            if(userProfile){
+              const args=request.params.arguments??{},keys=args.action_keys??(args.action_key?[args.action_key]:[]);
+              if(keys.some(key=>!['package.save_as','package.save_checkpoint'].includes(key)))throw Error('Use dock_node_apply for supported nodes; request node_types for the selected parameter schema. Low-level actions require the diagnostic profile.');
+            }
+            const description=actionRuntime.describe(request.params.arguments ?? {});
+            return { content: [{ type: 'text', text: JSON.stringify(userProfile?userActionInventory(description):description) }] };
+          }
+          return await dockGate(request.params.name, async () => {
+            extra.signal.throwIfAborted();
+            const args = request.params.arguments ?? {};
+            if(userProfile&&request.params.name==='dock_action_run'&&!['package.save_as','package.save_checkpoint'].includes(args.action_key))
+              throw Error('Use dock_node_apply for supported nodes. Low-level actions require the diagnostic profile.');
+            if(['dock_artifact_upload','dock_artifact_verify'].includes(request.params.name)) {
+              const definition=actionRuntime.tools.find(tool=>tool.name===request.params.name);
+              if(!definition)throw new Error('Artifact upload is unavailable in this session');
+              validateActionParameters(definition.inputSchema,args);
+            }
+            if (!(request.params.name === 'dock_workspace_observe' && args.scope === 'bootstrap')) requirePreparedWorkspace(session.metadata);
+            const saveRequest=request.params.name==='dock_action_run'
+              &&['package.save_as','package.save_checkpoint'].includes(args.action_key);
+            const operationId=saveRequest&&args.operation_id===undefined?randomUUID():args.operation_id;
+            const newSave=saveRequest&&!saveAdmissions.has(operationId);
+            const saveAdmission=newSave?{
+              sequence:saveSequence++,action_key:args.action_key,path:args.parameters?.path,
+              document_id:session.metadata.workspacePreparation?.state?.document_id}:null;
+            const outcome = request.params.name === 'dock_workspace_observe' ? await actionRuntime.observe({ signal: extra.signal, scope: args.scope, cursor: args.cursor, rootRef: args.root_ref, observationId: args.observation_id, storageName: args.storage_name })
+              : request.params.name === 'dock_operation_inspect' ? await actionRuntime.inspect({ operationId: args.operation_id, signal: extra.signal })
+                : request.params.name === 'dock_operation_recover' ? await actionRuntime.recover(args.operation_id,
+                  { strategy: args.strategy, recoveryOperationId: args.recovery_operation_id, observationId: args.observation_id, signal: extra.signal })
+                  : request.params.name === 'dock_artifact_verify' ? await actionRuntime.verifyArtifact({operationId:args.operation_id,verificationId:args.verification_id,
+                    observationId:args.observation_id,fileRef:args.file_ref,signal:extra.signal})
+                  : request.params.name === 'dock_artifact_upload' ? await actionRuntime.upload({artifactId:args.artifact_id,grantId:args.upload_grant_id,
+                    observationId:args.observation_id,operationId:args.operation_id,signal:extra.signal})
+                  : request.params.name === 'dock_ui_action' ? await actionRuntime.uiAct(args.action,
+                    { observationId: args.observation_id, operationId: args.operation_id, recoveryOperationId: args.recovery_operation_id, signal: extra.signal })
+                    : await actionRuntime.run(args.action_key, args.parameters, { signal: extra.signal, operationId });
+            // Validation throws, earlier reconciliation and proven no-effect
+            // refusals do not admit this Save. Bind only its returned receipt;
+            // an ambiguous admitted result can still be confirmed by inspection.
+            if(saveAdmission&&outcome.operation_id===operationId
+              &&!(['NOT_APPLIED','FAILED'].includes(outcome.status)&&outcome.effect_possible===false))
+              saveAdmissions.set(operationId,saveAdmission);
+            await logResult(request.params.name,outcome);
+            if (outcome.status === 'SUCCEEDED' && ['package.save_as','package.save_checkpoint'].includes(outcome.action_key)
+                && outcome.output?.package_ref?.path) savedPackages.set(outcome.output.package_ref.path, outcome.operation_id);
+            const confirmedSave=saveRequest?outcome:request.params.name==='dock_operation_inspect'
+              &&outcome.status==='SUCCEEDED'&&outcome.action_key==='operation.inspect'
+              &&outcome.operation_id===args.operation_id&&outcome.output?.state==='resolved'
+              &&outcome.output.cleanup_confirmed===true&&outcome.output.outcome?.operation_id===args.operation_id
+                ?outcome.output.outcome:null;
+            const admission=confirmedSave&&saveAdmissions.get(confirmedSave.operation_id);
+            // Reconciliation confirms the original admission, not a new Save.
+            // An older receipt can never supersede a later confirmed mutation.
+            if(admission&&confirmedSave.status==='SUCCEEDED'&&confirmedSave.action_key===admission.action_key
+              &&confirmedSave.output?.package_ref?.path===admission.path
+              &&admission.document_id===session.metadata.workspacePreparation?.state?.document_id
+              &&(!lastSavedPackage||admission.sequence>lastSavedPackage.sequence)) {
+              savedPackages.set(admission.path,confirmedSave.operation_id);
+              lastSavedPackage={path:admission.path,operation_id:confirmedSave.operation_id,
+                document_id:admission.document_id,sequence:admission.sequence};
+            }
+            if (userProfile && outcome.status === 'SUCCEEDED' && ['package.save_as','package.save_checkpoint'].includes(outcome.action_key))
+              for (const continuation of outcome.output?.workflow_continuations ?? []) userWorkflows.remember(continuation);
+            const reply = actionReply(userProfile?compactActionResult(outcome):outcome, { observe: request.params.name === 'dock_workspace_observe', userProfile });
+            if(outcome.status==='SUCCEEDED'&&['package.save_as','package.save_checkpoint'].includes(outcome.action_key)&&outcome.output?.package_ref?.path){
+              // Save As can reopen a package that Megaladata immediately marks
+              // modified. Report this while the model can still checkpoint it,
+              // rather than discovering it only during isolated shutdown.
+              try{
+                const prepared=session.metadata.workspacePreparation?.state;
+                const options={sessionId:session.metadata.sessionId,documentId:prepared?.document_id,
+                  account:prepared?.megaladata_account??config.replayLoginUser,packagePath:outcome.output.package_ref.path,
+                  megaladataUrl:config.megaladataUrl,megaladataBuild:session.metadata.targetIdentity.megaladata_build};
+                const response=await browser.callTool({name:'browser_run_code_unsafe',arguments:{code:makeSavedPackageStateCode(options)}},undefined,{timeout:15000});
+                const state=parseSavedPackageState(response,options),advice=savedPackageStateAdvice(state,outcome);
+                await recordExecution({phase:'saved_package_state_observed',operation_id:outcome.operation_id,state,advice});
+                reply.content.push({type:'text',text:JSON.stringify(advice)});
+              }catch{
+                // A read failure must not erase the completed save or invite
+                // a retry of an uncertain save gesture.
+                if(recovery.enabled)saveRecoveries.set(outcome.operation_id,{path:outcome.output.package_ref.path,
+                  document_id:session.metadata.workspacePreparation?.state?.document_id});
+                reply.content.push({type:'text',text:JSON.stringify({kind:'dock_saved_package_state',save_operation_id:outcome.operation_id,
+                  package_path:outcome.output.package_ref.path,modified:null,state:'unavailable',
+                  instruction:'The save receipt remains valid, but the current open package dirty state could not be verified. Do not claim that session cleanup is confirmed.',
+                  ...(recovery.enabled?{next_step:{tool:'dock_browser_recovery',arguments:{action:'start',operation_id:outcome.operation_id},
+                    reason:'SAVE_STATE_UNCONFIRMED',instruction:'Start browser recovery for this save yourself; do not ask the user to act in the interface.'}}:{})})});
+              }
+            }
+            try {
+              const verification = outcomeVerification(outcome, pinnedActions.actions.get(outcome.action_key));
+              await recordExecution({ phase: 'verification_delivered', operation_id: outcome.operation_id, verification });
+              reply.content.push({ type: 'text', text: JSON.stringify(verification) });
+            } catch {
+              reply.content.push({ type: 'text', text: 'Verification explanation unavailable; retain the original operation receipt. This does not establish goal completion.' });
+            }
+            try {
+              const context = userProfile ? null : await recoveryContext(outcome);
+              if (context) {
+                await recordExecution({ phase: 'knowledge_context_delivered', operation_id: outcome.operation_id, context });
+                reply.content.push({ type: 'text', text: JSON.stringify(context) });
+              }
+            } catch {
+              // Knowledge/journal failure cannot erase a completed browser receipt.
+              reply.content.push({ type: 'text', text: 'Recovery context unavailable; keep the operation receipt and inspect the actual state.' });
+            }
+            return reply;
+          });
+        }
+        if (owner === 'remote') return await remote.callTool(request.params, undefined, {
+          signal: extra.signal, timeout: 360000,
+        });
+        return await browserGate(async () => {
+          extra.signal.throwIfAborted();
+          if (clipboardUncertain) throw new Error('Clipboard completion is uncertain; restart this Dock client before further browser operations');
+          if (request.params.name !== 'dock_clipboard_transfer') {
+            return browser.callTool(request.params, undefined, { signal: extra.signal, timeout: 360000 });
+          }
+          const { code, token } = makeClipboardCode(request.params.arguments);
+          const confirmed = await runClipboardTransfer({
+            token, leases: heldLeases, signal: extra.signal,
+            onUncertain: () => { clipboardUncertain = true; },
+            // Once copy starts, cancellation cannot free the host lease while
+            // the browser may still paste. Shutdown releases retained leases.
+            execute: () => browser.callTool({ name: 'browser_run_code_unsafe', arguments: { code } }, undefined, { timeout: 360000 }),
+          });
+          if (!confirmed) return { isError: true, content: [{ type: 'text', text: 'Paste was not confirmed. The clipboard lock is retained; restart this Dock client before further browser operations.' }] };
+          return { content: [{ type: 'text', text: 'Copy and paste completed; the target DOM confirmed the result.' }] };
+        });
+      } catch (error) {
+        const message = String(error.message).replaceAll(config.apiKey, '[redacted]');
+        if(userProfile&&request.params.name==='dock_prepare'&&message.startsWith('UNKNOWN_PREPARED_WORKFLOW:')
+          &&!clipboardUncertain&&heldLeases.size===0&&!actionRuntime?.hasUnsettledWork()) {
+          const next_step={tool:'dock_prepare',arguments:{intent:'open_package',
+            ...(lastSavedPackage?{package_path:lastSavedPackage.path}:{})},
+            instruction:'The chat history does not prepare this runtime. Open the same saved package and use the freshly issued references. '
+              +(lastSavedPackage?'The path is from this runtime\'s last confirmed Save.':
+                'Supply the exact path from this chat\'s confirmed Save; this runtime does not know it. Do not guess a path or create a new draft.')};
+          return {isError:true,content:[{type:'text',text:JSON.stringify({code:'UNKNOWN_PREPARED_WORKFLOW',message,next_step})}]};
+        }
+        if (owner === 'action') {
+          const failure=actionRuntime.requestFailure(new Error(message));
+          if(userProfile)failure.output=userActionInventory(failure.output);
+          if(userProfile&&isNodeApiTool(request.params.name)){
+            const result=compactNodeRequestFailure(failure,request.params.arguments);
+            if(!result.effect_possible&&result.next_step.tool==='dock_node_apply')result.next_step.tool=request.params.name==='dock_node_resume'?'dock_node_apply':request.params.name;
+            return {content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result};
+          }
+          const reply=actionReply(failure,{userProfile});
+          // A rejected request is not a job snapshot. Preserve its recovery data
+          // as an MCP error; outputSchema applies to successful tool responses.
+          if(isNodeApiTool(request.params.name))reply.isError=true;
+          return reply;
+        }
+        return { isError: true, content: [{ type: 'text', text: message }] };
+      }
+    };
+    server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+      const reply=await callTool(request,extra);
+      return userProfile && ['local','action'].includes(catalog.routes.get(request.params.name))
+        ?boundedUserToolReply(reply,{tool:request.params.name,operationId:request.params.arguments?.operation_id}):reply;
+    });
+    return { server, catalog, hasActiveWork: () => !clipboardUncertain && (!!actionRuntime?.hasActiveWork() || recovery.unsettled()),
+      hasUnsettledWork: () => !!actionRuntime?.hasUnsettledWork() || recovery.unsettled() || clipboardUncertain || heldLeases.size > 0, close() {
+      shutdownStarted = true;
+      closing ??= (async () => {
+        await recovery.close();
+        const normalCleanup = config.closeSavedPackageOnShutdown === true;
+        const packagePath = config.acceptanceCleanupPackage ?? (normalCleanup ? lastSavedPackage?.path : userProfile && savedPackages.size === 1 ? savedPackages.keys().next().value : null);
+        const saveOperationId = normalCleanup ? lastSavedPackage?.operation_id : savedPackages.get(packagePath);
+        let cleanup;
+        if (packagePath || normalCleanup) {
+          const prepared = session.metadata.workspacePreparation;
+          if (!prepared?.attempted) cleanup = {status:'SKIPPED_UNPREPARED', session_id:session.metadata.sessionId};
+          else {
+            try {
+              // Refuse unsettled background node jobs before waiting on the
+              // browser gate. Shutdown never cancels them to force a close.
+              actionRuntime.assertPreparationAllowed();
+              if (actionRuntime.hasUnsettledWork() || recovery.unsettled() || clipboardUncertain || heldLeases.size > 0) throw Error('Unsettled work prevents package cleanup');
+              if (session.metadata.workspaceReady !== true || !packagePath || !saveOperationId
+                  || normalCleanup && lastSavedPackage.document_id !== prepared.state?.document_id) {
+                cleanup = {status:'BLOCKED', reason:'CONFIRMED_SAVE_REQUIRED'};
+              } else cleanup = await browserGate(async () => {
+                actionRuntime.assertPreparationAllowed();
+                if (actionRuntime.hasUnsettledWork() || recovery.unsettled() || clipboardUncertain || heldLeases.size > 0) throw Error('Unsettled work prevents package cleanup');
+                const cleanupOptions = {
+                  sessionId:session.metadata.sessionId, documentId:prepared.state.document_id,
+                  // Managed runtimes have no replay login account; the cleanup
+                  // binds to the account observed at workspace preparation.
+                  tabTid:prepared.state.workflow_ref.tab_tid, account:prepared.state.megaladata_account??config.replayLoginUser,
+                  packagePath, megaladataUrl:config.megaladataUrl,
+                  megaladataBuild:session.metadata.targetIdentity.megaladata_build,
+                };
+                const response = await browser.callTool({name:'browser_run_code_unsafe', arguments:{code:makePackageCleanupCode(cleanupOptions)}}, undefined, {timeout:30000});
+                return parsePackageCleanupResult(response, cleanupOptions);
+              });
+            } catch { cleanup = {status:'BLOCKED', reason:'CLEANUP_OR_OPERATION_UNCONFIRMED'}; }
+          }
+          cleanup = {...cleanup, session_id:session.metadata.sessionId,
+            save_operation_id:saveOperationId ?? null,
+            ...(normalCleanup ? {package_path:packagePath ?? null, policy:'last_confirmed_own_save'} : {})};
+          try {
+            await writeFile(join(session.directory,normalCleanup?'saved-package-cleanup.json':'package-cleanup.json'), JSON.stringify(cleanup,null,2)+'\n', {mode:0o600});
+            await recordExecution({event:normalCleanup?'managed_saved_package_cleanup':config.acceptanceCleanupPackage?'isolated_package_cleanup':'saved_package_cleanup', cleanup});
+          } catch (error) {
+            if (config.acceptanceCleanupPackage) throw error;
+            cleanup = {...cleanup, status:'BLOCKED', reason:'CLEANUP_EVIDENCE_UNCONFIRMED'};
+          }
+          if (config.acceptanceCleanupPackage && !['SUCCEEDED','SKIPPED_UNPREPARED'].includes(cleanup.status)) return {
+            browser_transport_closed:false, browser_process_terminated:false, clipboard_leases_retained:heldLeases.size,
+            package_cleanup:cleanup,
+          };
+        }
+        await server.close(); const closed=await closeClients();
+        if (closed[1].status === 'fulfilled') await awaitBrowserExit();
+        const browserTransportClosed = closed[1].status === 'fulfilled' && browserProcessTerminated;
+        if (browserTransportClosed) {
+          await session.artifactStore.releaseUploads();
+          await Promise.allSettled([...heldLeases].map(async lease => {
+            await lease.release(); heldLeases.delete(lease);
+          }));
+        }
+        // A failed transport close does not prove that an unconfirmed paste has
+        // stopped. Retain leases while this process lives; process exit still
+        // releases kernel locks and is not cross-process recovery evidence.
+        return { browser_transport_closed: browserTransportClosed,
+          browser_process_terminated: browserProcessTerminated, clipboard_leases_retained: heldLeases.size,
+          ...(cleanup ? {package_cleanup:cleanup} : {}) };
+      })();
+      return closing;
+    } };
+  } catch (error) {
+    await closeClients();
+    throw error;
+  }
+}

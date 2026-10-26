@@ -1,0 +1,265 @@
+import { createRequire } from "node:module"
+import { randomUUID } from "node:crypto"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
+import { appendFileSync } from "node:fs"
+import { verifyResources } from "./resources.mjs"
+import { validateStartInput } from "./start-input.mjs"
+import { closeManagedResources } from "./managed-resources-close.mjs"
+import { runtimeCallTimeout } from "./call-timeout.mjs"
+import { loginBrowser, megaladataAddress } from "./connection-check.mjs"
+import { createSession } from "../client/lib/session.mjs"
+import { admitStartupArtifacts } from "../client/lib/artifacts.mjs"
+import { createBridge } from "../client/lib/bridge.mjs"
+
+const require = createRequire(new URL("../client/package.json", import.meta.url))
+process.umask(0o077)
+const state = {
+  starting: false,
+  startupController: new AbortController(),
+  startupCleanupFailed: false,
+  closing: undefined,
+  bridge: undefined,
+  client: undefined,
+  controller: undefined,
+  session: undefined,
+  browser: undefined,
+  browserProfile: undefined,
+  browserServer: undefined,
+  inputs: new Map(),
+}
+const requests = new Set()
+const terminalTrace = (stage) => {
+  if (!state.session?.directory) return
+  try {
+    appendFileSync(join(state.session.directory, "terminal-close.jsonl"),
+      JSON.stringify({ version: 1, stage, recorded_at: new Date().toISOString() }) + "\n", { mode: 0o600 })
+  } catch { /* Diagnostics cannot change the checked shutdown result. */ }
+}
+const send = (message, disconnect = false) => {
+  if (disconnect) terminalTrace("reply_sending")
+  if (process.connected)
+    process.send(message, (error) => {
+      if (!disconnect) return
+      terminalTrace(error ? "reply_failed" : "reply_flushed")
+      if (!error && process.connected) process.disconnect()
+      terminalTrace("disconnect_returned")
+      // Node may postpone 'disconnect' while an incomplete later IPC frame is
+      // buffered. The reply is flushed and admitted work/resources are already
+      // drained; use the same checked stop path without waiting for that frame.
+      stop(error ? 1 : 0)
+    })
+}
+function close() {
+  if (state.closing) return state.closing
+  state.controller?.abort()
+  state.startupController.abort(Error("MEGALADATA_HOST_CLOSED"))
+  state.closing = closeManagedResources(state, requests)
+  return state.closing
+}
+const stop = (exitCode = 0) => {
+  terminalTrace("stop_requested")
+  void close().then(
+    () => { terminalTrace("exit_requested"); process.exit(exitCode) },
+    () => { terminalTrace("cleanup_rejected"); process.exit(1) },
+  )
+}
+process.on("exit", () => terminalTrace("exit_event"))
+process.on("disconnect", () => stop())
+process.on("SIGTERM", () => stop())
+process.on("message", (message) => {
+  const request = handle(message)
+  requests.add(request)
+  void request
+    .finally(() => requests.delete(request))
+    .catch(() => {
+      process.exitCode = 1
+    })
+})
+async function handle(message) {
+  if (!message || typeof message !== "object" || typeof message.id !== "string") return
+  try {
+    if (state.closing && message.operation !== "close") throw Error("MEGALADATA_RUNTIME_CLOSING")
+    if (message.operation === "start") {
+      if (state.starting) throw Error("MEGALADATA_ALREADY_STARTED")
+      state.starting = true
+      const input = message.input
+      const { acceptanceCleanupPackage, closeSavedPackageOnShutdown, browserRecovery } = validateStartInput(input)
+      const resources = await verifyResources(input.resources)
+      // A new process must never overwrite the receipts or browser state of a crashed attempt.
+      const directory = join(
+        input.stateDir,
+        "generations",
+        String(input.generation),
+        "chats",
+        input.chat,
+        "attempts",
+        randomUUID(),
+      )
+      await mkdir(directory, { recursive: true, mode: 0o700 })
+      // Chromium creates nested files below user-data-dir. The normal Desktop
+      // state path is already close to MAX_PATH on Windows, so a valid profile
+      // can otherwise fail before Megaladata authentication even starts.
+      const browserProfile =
+        process.platform === "win32" ? await mkdtemp(join(tmpdir(), "lb")) : join(directory, "browser-profile")
+      state.browserProfile = process.platform === "win32" ? browserProfile : undefined
+      const login = {
+        browserPath: resources.browserPath,
+        profile: browserProfile,
+        candidate: input.connection,
+        headless: input.headless === true,
+        signal: state.startupController.signal,
+      }
+      if (input.validation === true) {
+        await loginBrowser(login)
+        send({ id: message.id, result: { checked: true, protocol: 1, generation: input.generation } })
+        return
+      }
+      const authenticated = await loginBrowser({ ...login, keepOpen: true })
+      state.browser = authenticated.context
+      const config = {
+        resources: input.resources,
+        endpoint: input.endpoint,
+        apiKey: input.connection.apiKey,
+        // Preparation must bind to the same canonical path used by private login.
+        megaladataUrl: megaladataAddress(input.connection.url),
+        stateDir: input.stateDir,
+        agent: "megaladata-ai-agent",
+        adapterRevision: "1",
+        mode: "executor-replay",
+        resultProfile: "user-v1",
+        actionManifestUri: input.actionManifestUri,
+        actionManifestSha256: input.actionManifestSha256,
+        replayBootstrap: false,
+        replayLoginUser: null,
+        // Acceptance-only shutdown cleanup; the bridge binds it to the observed
+        // prepared account, so no replay login account is needed here.
+        acceptanceCleanupPackage,
+        closeSavedPackageOnShutdown,
+        browserRecovery,
+        storageDirectories: {
+          inputs: `/${input.connection.username}`,
+          exports: `/${input.connection.username}`,
+          packages: `/${input.connection.username}`,
+        },
+        inputUploadDirectory: `/${input.connection.username}`,
+      }
+      const session = await createSession(config, {
+        headless: input.headless === true,
+        managed: { directory, browserPath: resources.browserPath, browserRoot: resources.browserRoot },
+      })
+      state.session = session
+      const { Client } = require("@modelcontextprotocol/sdk/client/index.js")
+      const { InMemoryTransport } = require("@modelcontextprotocol/sdk/inMemory.js")
+      const { createConnection } = require("@playwright/mcp")
+      state.browserServer = await createConnection(
+        JSON.parse(await readFile(session.browserConfig, "utf8")),
+        async () => authenticated.context,
+      )
+      const [browserClientTransport, browserServerTransport] = InMemoryTransport.createLinkedPair()
+      await state.browserServer.connect(browserServerTransport)
+      state.bridge = await createBridge(config, session, { browserTransport: browserClientTransport })
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+      state.client = new Client({ name: "megaladata-ai-agent-host", version: "0.1.0" })
+      await state.bridge.server.connect(serverTransport)
+      await state.client.connect(clientTransport)
+      send({
+        id: message.id,
+        result: {
+          ready: true,
+          protocol: 1,
+          generation: input.generation,
+          chat: input.chat,
+          manifestHash: resources.manifestHash,
+          browserHash: resources.browserHash,
+          clientRevision: session.metadata.clientRevision,
+        },
+      })
+      return
+    }
+    if (message.operation === "close") {
+      await close()
+      send({ id: message.id, result: { closed: true } }, true)
+      return
+    }
+    if (state.closing) throw Error("MEGALADATA_RUNTIME_CLOSING")
+    if (!state.client) throw Error("MEGALADATA_NOT_READY")
+    if (message.operation === "work") {
+      send({
+        id: message.id,
+        result: {
+          activeWork: state.bridge.hasActiveWork(),
+          unsettledWork: state.bridge.hasUnsettledWork(),
+          dispatching: state.controller !== undefined,
+        },
+      })
+      return
+    }
+    if (message.operation === "admit") {
+      if (typeof message.input.userMessage !== "string" || !message.input.userMessage)
+        throw Error("MEGALADATA_INPUT_INVALID")
+      const previous = state.inputs.get(message.input.userMessage)
+      if (previous) {
+        send({ id: message.id, result: previous })
+        return
+      }
+      const result = await admitStartupArtifacts(state.session.artifactStore, message.input.files)
+      state.inputs.set(message.input.userMessage, result)
+      send({ id: message.id, result })
+      return
+    }
+    if (message.operation === "list") {
+      send({
+        id: message.id,
+        result: { ...(await state.client.listTools()), prepared: state.session.metadata.workspaceReady === true },
+      })
+      return
+    }
+    if (message.operation === "interrupt") {
+      state.controller?.abort()
+      send({ id: message.id, result: { interrupted: true } })
+      return
+    }
+    if (message.operation !== "call" || state.controller) throw Error("MEGALADATA_REQUEST_INVALID")
+    const controller = new AbortController()
+    state.controller = controller
+    try {
+      // Allow the bounded owned read and cleanup to return before the outer IPC
+      // deadlines. Other tools retain room for a 60-second dock_node_wait.
+      const result = await state.client.callTool(message.input, undefined, {
+        signal: controller.signal,
+        timeout: runtimeCallTimeout(message.input.name, message.input.arguments),
+      })
+      send({
+        id: message.id,
+        result: {
+          result,
+          recoveryPending: state.bridge.hasUnsettledWork(),
+          activeWork: state.bridge.hasActiveWork(),
+        },
+      })
+    } finally {
+      state.controller = undefined
+    }
+  } catch (error) {
+    if (message.operation === "start" && error?.cause?.login) {
+      // Validation deletes its generations/chat profile. Retain only the
+      // sanitized login failure at the private state root, outside that tree.
+      await writeFile(join(message.input.stateDir, `login-failure-${randomUUID()}.json`), JSON.stringify({
+        version: 1, recorded_at: new Date().toISOString(), code: error.message, ...error.cause.login,
+      }) + "\n", { mode: 0o600, flag: "wx" }).catch(() => undefined)
+    }
+    if (message.operation === "start" && error?.message === "MEGALADATA_RUNTIME_CLEANUP_FAILED")
+      state.startupCleanupFailed = true
+    const code = /^MEGALADATA_[A-Z_]+$/.test(error?.message ?? "") ? error.message : "MEGALADATA_RUNTIME_FAILED"
+    send({ id: message.id, error: code }, message.operation === "close")
+    if (message.operation === "start") {
+      // Clean up immediately, but keep IPC until the owner requests an acknowledged close.
+      // close() retains a rejection so that the later close request reports cleanup failure.
+      setImmediate(() => {
+        void close().catch(() => undefined)
+      })
+    }
+  }
+}

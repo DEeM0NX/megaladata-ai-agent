@@ -1,0 +1,114 @@
+import { createHash } from 'node:crypto';
+import {JAVASCRIPT_CARD_LIMITATIONS,JAVASCRIPT_KNOWLEDGE_SHA256,describeJavascriptKnowledge} from './javascript-knowledge.mjs';
+
+export const NODE_CONTRACT_REVISION = '1.0.0';
+// Native node labels and ports extend above/left of the model-space origin.
+// Zoom cannot reveal that footprint at the canvas's zero-scroll boundary.
+export const NODE_POSITION_MIN = 64;
+const definitions = [
+  ['integration.rest_request','REST Request','restclient',1,2,false,['request'],'processors/integration/rest-request.html'],
+  ['datamining.lin_regression','Linear Regression','linregression',1,2,false,['enter'],'processors/datamining/linear-regression/README.md'],
+  ['datamining.clustering','Clustering','clusterization',1,2,false,['k_means'],'processors/datamining/clustering.md'],
+  ['transform.cross_table','Cross Table','crosstab',1,1,false,['pivot'],'processors/transformation/cross-table.html'],
+  ['research.duplicates', 'Duplicates and Inconsistencies', 'duplicates', 1, 1, false, ['mark'], 'processors/scrutiny/duplicates.md'],
+  ['preprocessing.data_recovery', 'Imputation', 'datarecovery', 1, 1, false, ['impute'], 'processors/preprocessing/imputation.md'],
+  ['exports.text', 'Text File', 'exporttextfile', 1, 0, false, ['delimited'], 'integration/export/txt-csv.md'],
+  ['imports.excel', 'Excel File', 'importexcelfile', 0, 1, false, ['xlsx'], 'integration/import/excel/README.md'],
+  ['imports.text', 'Text File', 'importtextfile', 0, 1, false, ['delimited'], 'integration/import/txt/README.md'],
+  ['transform.calculator', 'Calculator', 'calcdata', 1, 1, false, ['expression'], 'processors/transformation/calc/README.md'],
+  ['transform.reform_columns', 'Field Features', 'reformcolumns', 1, 1, false, ['scalar'], 'processors/transformation/fields-features.md'],
+  ['transform.filter_data', 'Row Filter', 'filterdata', 1, 2, false, ['conditions', 'row_number'], 'processors/transformation/row-filter/README.md'],
+  ['transform.group_data', 'Grouping', 'groupdata', 1, 1, false, ['aggregate'], 'processors/transformation/grouping.md'],
+  ['transform.replace_columns', 'Replace', 'replacecolumns', 1, 1, false, ['exact'], 'processors/transformation/substitution/README.md'],
+  ['transform.date_time', 'Date and Time', 'datereform', 1, 1, false, ['calendar'], 'processors/transformation/trans-datatime/README.md'],
+  ['transform.collapse_columns', 'Unpivoting', 'columnflipping', 1, 1, false, ['unpivot'], 'processors/transformation/collapse-columns.md'],
+  ['transform.sorting', 'Sort', 'sorting', 1, 1, false, ['keys'], 'processors/transformation/sorting.md'],
+  ['transform.join_data', 'Join', 'joindata', 2, 1, false, ['inner', 'left'], 'processors/transformation/join/README.md'],
+  ['transform.union_data', 'Union', 'uniondata', 2, 1, true, ['append_all'], 'processors/transformation/union.md'],
+  ['programming.javascript', 'JavaScript', 'javascript', 1, 1, false, ['script'], 'processors/programming/java-script/index.html'],
+];
+const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
+export const NODE_TYPES = freeze(Object.fromEntries(definitions.map(([type, title, icon, inputs, outputs, additional, modes, help]) => [type, {
+  type, title, palette_group: type === 'integration.rest_request' ? 'Integration' : ['datamining.clustering','datamining.lin_regression'].includes(type) ? 'Data_Mining' : type === 'programming.javascript' ? 'Scripting' : type === 'exports.text' ? 'Export' : type === 'research.duplicates' ? 'Exploration' : type === 'preprocessing.data_recovery' ? 'Preprocessing' : ['imports.text','imports.excel'].includes(type) ? 'Import' : 'Transformation', icon_class: 'bg-vendor-icon-' + icon, contract_revision: NODE_CONTRACT_REVISION,
+  tabular_inputs: inputs, tabular_outputs: outputs, additional_tabular_inputs: additional, modes,
+  semantics: type === 'imports.excel' ? 'Import the original uploaded Excel XLSX workbook with explicit column types (no automatic typing). One named worksheet or the first sheet, header rows, all columns in source order. No text conversion, named ranges, XLS/XLSM or multiple workbooks. Mode xlsx. Use verified delivery source IDs and parameters.excel settings.' : type === 'integration.rest_request' ? 'GET per input row through a separate native REST-service connection. String query parameters only, no authentication, certificate verification enabled. Output 0: RequestID and Response JSON text. Output 1: RequestID, ErrorCode, ErrorDesc, HttpStatusCode. Use actual status from output 1 and parse returned values downstream; join by RequestID.' : type === 'datamining.lin_regression' ? 'Train linear regression on the connected CSV/table with input_fields predictors and one target_field, using Enter, an intercept and no normalization. Execute first trains using the native training action, then executes. Read BOTH outputs with read.ports:[0,1]: 0 is per-row predictions plus original fields; 1 is coefficient names and values including the intercept. Saved-model application, holdout, retraining and validation are outside stage 1.'
+    : type === 'datamining.clustering' ? 'K-means clustering of numeric features. Execute trains or retrains on the current connected input, then executes. Output 0 retains all rows with Cluster and Distance; output 1 contains cluster centers. Default seed 42 and no normalization; other modes and applying a saved model to new data are deferred.'
+    : type === 'transform.cross_table' ? 'Pivot summary: row keys × column categories × numeric fact aggregates. fixed preserves captured categories with optional NULL/Other groups; sliding changes categories after source updates. Reread the SAME node with dock_node_read and its original source_operation_id; never reconfigure to refresh categories.'
+    : type === 'programming.javascript' ? 'Megaladata 7.4.2 synchronous scalar Data API, one tabular input and output (port 0); declared or code-defined schema. Requires an installed owned handler.'
+    : type === 'transform.join_data' ? 'Join two tables by keys; not positional Column Union.'
+    : type === 'transform.union_data' ? 'Append rows, preserving duplicates; not UNION DISTINCT.' : type === 'research.duplicates' ? 'Mark all copies and contradictions; retain all rows. Filtering Duplicate=false removes every member of a duplicate group. Unassigned fields are preserved and ignored. No automatic deduplication or conflict resolution.' : title,
+  graph_handler: 'node_target_v1', graph_handler_status: 'internal_candidate', configuration_handler: null,
+  configuration_status: type==='programming.javascript'?'planned_in_subplan_javascript':type==='exports.text'?'candidate_in_subplan_17':'planned_in_subplans_03_to_10',
+  sources: { e2e: ['bg/helpers/workflow/node.ts', 'bg/helpers/workflow/ports.ts', 'bg/helpers/workflow/links.ts'],
+    help_root: 'viking://resources/megaladata-dock/sources/megaladata-help', help_path: 'data/' + help },
+}])));
+
+const object = (value, keys, required = keys) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || Object.keys(value).some(k => !keys.includes(k)) || required.some(k => !Object.hasOwn(value, k))) throw new Error('Invalid node contract object');
+};
+const id = value => { if (typeof value !== 'string' || !/^[A-Za-z0-9_.:-]{1,128}$/.test(value)) throw new Error('Invalid node identity'); };
+const index = value => { if (!Number.isInteger(value) || value < 0 || value > 99) throw new Error('Invalid tabular port index'); };
+export function validateNodeReference(ref) {
+  object(ref, ['document_id', 'workflow_id', 'node_id']); Object.values(ref).forEach(id);
+}
+export function validateNodeTargetRequest(request) {
+  object(request, ['document_id', 'workflow_ref', 'target', 'inputs'], ['document_id', 'workflow_ref', 'target', 'inputs']);
+  id(request.document_id);
+  object(request.workflow_ref, ['workflow_id', 'tab_tid', 'prefix', 'navigation_path']);
+  id(request.workflow_ref.workflow_id);
+  if (!/^MF;TF(?:-\d+)?$/.test(request.workflow_ref.prefix)
+    || !/^MF;cntMain;cntWorkspace;Workspace;t\.br;tb(?:-\d+)?$/.test(request.workflow_ref.tab_tid)
+    || !Array.isArray(request.workflow_ref.navigation_path) || !request.workflow_ref.navigation_path.length || request.workflow_ref.navigation_path.length > 32
+    || request.workflow_ref.navigation_path.some(c=>!c || typeof c.tid!=='string' || !c.tid || typeof c.label!=='string' || Object.keys(c).some(k=>!['tid','label'].includes(k)))) throw new Error('Full prepared workflow reference required');
+  const target = request.target;
+  if (target?.kind === 'new') {
+    object(target, ['kind', 'type', 'label', 'position'], ['kind', 'type']);
+    if (!Object.hasOwn(NODE_TYPES, target.type)) throw new Error('Node type has no local graph handler');
+  } else if (target?.kind === 'existing') {
+    object(target, ['kind', 'ref', 'type', 'label', 'position'], ['kind', 'ref', 'type']);
+    validateNodeReference(target.ref);
+    if (!Object.hasOwn(NODE_TYPES, target.type)) throw new Error('Node type has no local graph handler');
+    if (target.ref.document_id !== request.document_id || target.ref.workflow_id !== request.workflow_ref.workflow_id) throw new Error('Target belongs to another workflow');
+  } else throw new Error('Choose exactly one new or existing node target');
+  if (target.label !== undefined && (typeof target.label !== 'string' || !target.label.trim() || target.label.length > 200
+    || /[;|<>"'\\\x00-\x1f]/.test(target.label))) throw new Error('Invalid parameters.target.label: expected nonblank text of at most 200 UTF-16 code units without semicolon, vertical bar, angle brackets, single/double quotes, backslash or control characters U+0000..U+001F. Omit target.label or use a plain-language caption; keep comparison operators in parameters, not in the node label');
+  if (target.position !== undefined) {
+    object(target.position, ['x', 'y']);
+    for(const axis of ['x','y'])if(!Number.isFinite(target.position[axis]) || target.position[axis]<NODE_POSITION_MIN || target.position[axis]>10000)
+      throw new Error('Invalid parameters.target.position.'+axis+': expected '+NODE_POSITION_MIN+'..10000 to keep the node label and ports inside the canvas; omit target.position for automatic placement');
+  }
+  if (!Array.isArray(request.inputs) || request.inputs.length > 100) throw new Error('Bounded input list required');
+  const targets = new Set();
+  for (const input of request.inputs) {
+    object(input, ['source', 'output', 'input']); validateNodeReference(input.source); index(input.output); index(input.input);
+    if (input.source.document_id !== request.document_id || input.source.workflow_id !== request.workflow_ref.workflow_id) throw new Error('Input belongs to another workflow');
+    if (targets.has(input.input)) throw new Error('More than one source for a target input');
+    targets.add(input.input);
+    if (!NODE_TYPES[target.type].additional_tabular_inputs && input.input >= NODE_TYPES[target.type].tabular_inputs) throw new Error('Target tabular input does not exist');
+    if (target.kind === 'existing' && input.source.node_id === target.ref.node_id) throw new Error('Self-link is not allowed');
+  }
+  return request;
+}
+
+// Cards are data only. They never install handlers or imply platform/license availability.
+export function describeNodeTypes(types, pins = {}, actions = new Map(), candidateHandlers = new Map(), observedBuild) {
+  if (!Array.isArray(types) || !types.length || types.length > 32 || new Set(types).size !== types.length
+    || types.some(type => !Object.hasOwn(NODE_TYPES, type))) throw new Error('Select one to thirty-two distinct supported node types');
+  return types.map(type => {
+    const card = structuredClone(NODE_TYPES[type]);
+    const admitted = actions.get('node.add')?.input_schema?.properties?.component_key?.enum?.includes(type) === true;
+    const candidate=candidateHandlers.get(type);
+    const javascript=type==='programming.javascript'&&candidate?describeJavascriptKnowledge(observedBuild):null;
+    const identity = { type, contract_revision: NODE_CONTRACT_REVISION, pins, candidate_handler_revision:candidate?.revision??null,
+      ...(type==='programming.javascript'?{knowledge_sha256:JAVASCRIPT_KNOWLEDGE_SHA256}:{}) };
+    return { ...card, catalog_add_available: admitted, platform_availability: 'requires_live_preflight',
+      full_node_apply_available: false, cache_key: createHash('sha256').update(JSON.stringify(identity)).digest('hex'),
+      candidate_node_apply_available:!!candidate,
+      ...(candidate?{configuration_handler:candidate.revision,configuration_status:'candidate_pending_autonomous_acceptance',candidate_apply_tool:'dock_node_apply',candidate_modes:[...candidate.modes]}:{}),
+      ...(candidate?.parameter_schema?{parameter_schema:structuredClone(candidate.parameter_schema)}:{}),
+      ...(javascript?{limitations:[...JAVASCRIPT_CARD_LIMITATIONS],knowledge_sha256:JAVASCRIPT_KNOWLEDGE_SHA256,
+        validated_for:javascript.validated_for,javascript_knowledge:javascript}:{}),
+      session_manifest: structuredClone(pins) };
+  });
+}

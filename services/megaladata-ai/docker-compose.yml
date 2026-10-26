@@ -1,0 +1,47 @@
+name: megaladata-dock
+
+# Build this checkout; see docs/megaladata-dock/development.md for configuration.
+services:
+  openviking:
+    image: ${MEGALADATA_DOCK_IMAGE:-megaladata-dock:dev}
+    build:
+      context: .
+      args:
+        OPENVIKING_VERSION: ${MEGALADATA_DOCK_BUILD_VERSION:-0.1.0.dev0}
+        UV_LOCK_STRATEGY: locked
+        MEGALADATA_DOCK_REVISION: ${MEGALADATA_DOCK_REVISION:-working-tree}
+    ports:
+      - "127.0.0.1:${MEGALADATA_DOCK_PORT:-1933}:1933"
+    volumes:
+      - dock_data:/app/.openviking
+    environment:
+      OPENVIKING_PUBLIC_BASE_URL: ${MEGALADATA_DOCK_PUBLIC_BASE_URL:-}
+      OPENVIKING_SERVER_PORT: "1933"
+      OPENVIKING_WITH_BOT: ${MEGALADATA_DOCK_WITH_BOT:-0}
+    healthcheck:
+      test: ["CMD", "openviking-entrypoint", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # Optional local proxy. Configure public TLS during server rollout.
+  caddy:
+    profiles: [proxy]
+    image: caddy:2
+    ports:
+      - "127.0.0.1:${MEGALADATA_DOCK_PROXY_PORT:-1934}:1934"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      openviking:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  dock_data:
+  caddy_data:
+  caddy_config:

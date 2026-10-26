@@ -1,0 +1,31 @@
+{
+  "name": "@megaladata-ai-agent/megaladata-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./system-proxy": "./src/system-proxy/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@megaladata-ai-agent/product": "workspace:*",
+    "@megaladata-ai-agent/schema": "workspace:*",
+    "@xmldom/xmldom": "0.8.15",
+    "@zip.js/zip.js": "2.7.62",
+    "acorn": "8.15.0",
+    "effect": "catalog:",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@lydell/node-pty": "catalog:",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@tsconfig/node22": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}
