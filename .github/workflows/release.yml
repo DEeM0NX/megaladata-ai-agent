@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "candidate builds and tests this ref without publishing; cut bumps the version, commits and pushes a tag from main or dev"
+        description: "candidate builds this ref and, when the ref is a tag, publishes its installers to the GitHub release; cut bumps the version, commits and pushes a tag from main or dev"
         type: choice
         options:
           - candidate
@@ -375,11 +375,11 @@ jobs:
 
   release:
     name: release
-    # Every platform must pass before a complete draft release can be created.
+    # Every platform must pass. A manual run publishes only when it was started from a tag.
     needs: [verify, build, windows, macos]
-    if: always() && github.event_name == 'push' && github.ref_type == 'tag' && needs.verify.result == 'success' && needs.build.result == 'success' && needs.windows.result == 'success' && needs.macos.result == 'success'
+    if: always() && github.ref_type == 'tag' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.verify.result == 'success' && needs.build.result == 'success' && needs.windows.result == 'success' && needs.macos.result == 'success'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: write
     env:
@@ -411,17 +411,20 @@ jobs:
           find "$RUNNER_TEMP/assets" -name '*.log' -delete
           bun script/release-notes.ts --tag "$TAG" --channel "$CHANNEL" --assets "$RUNNER_TEMP/assets" --output "$RUNNER_TEMP/notes.md"
 
-      - name: Create draft release
+      - name: Publish release
         run: |
           set -euo pipefail
           if gh release view "$TAG" --json isDraft >/dev/null 2>&1; then
-            echo "::error::A release for $TAG already exists; delete the stale draft before re-running"
+            echo "::error::A release for $TAG already exists"
             exit 1
           fi
-          args=(--draft --prerelease --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md")
+          args=(--verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md")
+          if [ "$PRERELEASE" = "true" ]; then
+            args+=(--prerelease)
+          fi
           url=$(gh release create "$TAG" "${args[@]}" "$RUNNER_TEMP"/assets/*)
           {
-            echo "Draft release: $url"
+            echo "Release: $url"
             echo
             cat "$RUNNER_TEMP/notes.md"
           } >> "$GITHUB_STEP_SUMMARY"
