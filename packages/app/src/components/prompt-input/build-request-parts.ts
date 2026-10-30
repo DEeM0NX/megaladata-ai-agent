@@ -1,6 +1,6 @@
-import { getFilename } from "@megaladata-ai-agent/core/util/path"
+import { getFilename } from "@opencode-ai/core/util/path"
 import { MEGALADATA_PACKAGE_MIME } from "@/constants/file-picker"
-import { type AgentPartInput, type FilePartInput, type Part, type TextPartInput } from "@megaladata-ai-agent/sdk/v2/client"
+import { type AgentPartInput, type FilePartInput, type Part, type TextPartInput } from "@opencode-ai/sdk/v2/client"
 import type { FileSelection } from "@/context/file"
 import { encodeFilePath } from "@/context/file/path"
 import type { AgentPart, FileAttachmentPart, ImageAttachmentPart, Prompt } from "@/context/prompt"
@@ -229,6 +229,21 @@ export function buildAttachmentParts(images: BuildRequestPartsInput["images"]) {
 
   const files = images.flatMap((attachment) => {
     if (attachment.mime === MEGALADATA_PACKAGE_MIME) return []
+    if (attachment.reference)
+      return [
+        {
+          id: Identifier.ascending("part"),
+          type: "file" as const,
+          mime: attachment.mime,
+          url: `file://${encodeFilePath(attachment.reference.sourcePath)}`,
+          filename: attachment.filename,
+          source: {
+            type: "file" as const,
+            path: attachment.reference.sourcePath,
+            text: { value: "megaladata-attachment:" + attachment.reference.receipt, start: 0, end: 0 },
+          },
+        },
+      ]
     return [
       {
         id: Identifier.ascending("part"),

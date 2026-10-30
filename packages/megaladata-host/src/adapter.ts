@@ -1,4 +1,5 @@
 import type { InputFile } from "./inputs"
+import type { FileReference, ReferenceSnapshot } from "./file-reference"
 export * as MegaladataHost from "./adapter"
 
 import { randomUUID } from "node:crypto"
@@ -55,6 +56,24 @@ export async function acquire(session: string) {
     async admit(userMessage: string, files: InputFile[]) {
       return queued(() => connection.request("admit", { run, userMessage, files }, undefined, observe))
     },
+    // Private backend API: never advertise grants or OS paths as MCP arguments.
+    async reserveReference(userMessage: string, name: string, snapshot: ReferenceSnapshot): Promise<FileReference> {
+      return queued(async () => {
+        const value = await connection.request(
+          "referenceReserve",
+          { run, userMessage, name, snapshot },
+          undefined,
+          observe,
+        )
+        return value as FileReference
+      })
+    },
+    async admitReference(reference: FileReference) {
+      return queued(() => connection.request("referenceAdmit", { run, reference }, undefined, observe))
+    },
+    async discardReference(grant: string) {
+      return queued(() => connection.request("referenceDiscard", { run, grant }, undefined, observe))
+    },
     async scope(mode: HostTaskScope.Request["mode"], scope: HostTaskScope.Info, signal?: AbortSignal) {
       return queued(async () => {
         if (signal?.aborted) throw new Error("MEGALADATA_RUN_ABORTED")
@@ -72,6 +91,8 @@ export async function acquire(session: string) {
       userMessage: string,
       signal?: AbortSignal,
       admissions?: { userMessage: string; files: InputFile[] }[],
+      packageInput?: { admissionID: string; file: InputFile },
+      scanReceipt?: { profile_id: string; records: number; sha256: string; bytes: number; identity: unknown; basis: "backend_exact_scan" },
     ) {
       // Serialize before transport admission so waiting does not consume the IPC timeout
       // or create durable recovery records for calls that have not started.
@@ -84,7 +105,7 @@ export async function acquire(session: string) {
           signal?.addEventListener("abort", abort, { once: true })
           return await connection.request(
             "call",
-            { run, name, args, userMessage, admissions },
+            { run, name, args, userMessage, admissions, ...(packageInput ? { packageInput } : {}), ...(scanReceipt ? { scanReceipt } : {}) },
             Math.max(180_000, runtimeCallTimeout(name, args) + 30_000),
             observe,
           )

@@ -8,9 +8,10 @@ import { verifyResources } from "./resources.mjs"
 import { validateStartInput } from "./start-input.mjs"
 import { closeManagedResources } from "./managed-resources-close.mjs"
 import { runtimeCallTimeout } from "./call-timeout.mjs"
+import { createExecutionJournal } from "../client/lib/execution-journal.mjs"
 import { loginBrowser, megaladataAddress } from "./connection-check.mjs"
 import { createSession } from "../client/lib/session.mjs"
-import { admitStartupArtifacts } from "../client/lib/artifacts.mjs"
+import { admitStartupArtifacts, artifactFailure } from "../client/lib/artifacts.mjs"
 import { createBridge } from "../client/lib/bridge.mjs"
 
 const require = createRequire(new URL("../client/package.json", import.meta.url))
@@ -28,6 +29,8 @@ const state = {
   browserProfile: undefined,
   browserServer: undefined,
   inputs: new Map(),
+  owner: undefined,
+  uploadDirectory: undefined,
 }
 const requests = new Set()
 const terminalTrace = (stage) => {
@@ -95,6 +98,10 @@ async function handle(message) {
       if (state.starting) throw Error("MEGALADATA_ALREADY_STARTED")
       state.starting = true
       const input = message.input
+      state.owner = { chat: input.chat, generation: input.generation }
+      state.uploadDirectory = `/${input.connection.username}`
+      // Match the existing supervisor allowance; retries never restart it.
+      const deadline = Date.now() + (input.validation === true ? 210_000 : 120_000)
       const { acceptanceCleanupPackage, closeSavedPackageOnShutdown, browserRecovery } = validateStartInput(input)
       const resources = await verifyResources(input.resources)
       // A new process must never overwrite the receipts or browser state of a crashed attempt.
@@ -120,13 +127,16 @@ async function handle(message) {
         candidate: input.connection,
         headless: input.headless === true,
         signal: state.startupController.signal,
+        deadline,
+        onRetry: createExecutionJournal({ directory, metadata: { sessionId: input.chat,
+          clientRevision: resources.manifestHash, actionManifestDigest: resources.manifest.actionManifestSha256 } }),
       }
       if (input.validation === true) {
         await loginBrowser(login)
         send({ id: message.id, result: { checked: true, protocol: 1, generation: input.generation } })
         return
       }
-      const authenticated = await loginBrowser({ ...login, keepOpen: true,
+      const authenticated = await loginBrowser({ ...login, keepOpen: true, downloadsPath:join(directory,'browser-downloads'),
         onContextCreated: context => { state.browser = context } })
       state.browser = authenticated.context
       const config = {
@@ -207,6 +217,17 @@ async function handle(message) {
       })
       return
     }
+    if (message.operation === "admitReference") {
+      const reference = message.input?.reference
+      if (!reference || reference.chat !== state.owner?.chat || reference.generation !== state.owner?.generation)
+        throw Error("MEGALADATA_INPUT_INVALID")
+      const result = await state.session.artifactStore.admitReference(reference, {
+        directory: state.uploadDirectory,
+        overwrite: "reject",
+      })
+      send({ id: message.id, result })
+      return
+    }
     if (message.operation === "admit") {
       if (typeof message.input.userMessage !== "string" || !message.input.userMessage)
         throw Error("MEGALADATA_INPUT_INVALID")
@@ -228,20 +249,30 @@ async function handle(message) {
       return
     }
     if (message.operation === "interrupt") {
+      state.bridge?.cancelArtifactDeliveries?.()
       state.controller?.abort()
       send({ id: message.id, result: { interrupted: true } })
       return
     }
     if (message.operation !== "call" || state.controller) throw Error("MEGALADATA_REQUEST_INVALID")
+    if (message.input.packageArtifact !== undefined && message.input.name !== "dock_prepare")
+      throw Error("MEGALADATA_REQUEST_INVALID")
     const controller = new AbortController()
     state.controller = controller
     try {
       // Allow the bounded owned read and cleanup to return before the outer IPC
       // deadlines. Other tools retain room for a 60-second dock_node_wait.
-      const result = await state.client.callTool(message.input, undefined, {
+      const options = {
         signal: controller.signal,
         timeout: runtimeCallTimeout(message.input.name, message.input.arguments),
-      })
+      }
+      const result = message.input.packageArtifact !== undefined
+        ? await state.bridge.prepareLocalPackage(message.input.arguments, message.input.packageArtifact, {
+            signal: AbortSignal.any([controller.signal, AbortSignal.timeout(options.timeout)]),
+          })
+        : message.input.scanReceipt !== undefined
+          ? await state.bridge.applyWithScanReceipt(message.input.arguments, message.input.scanReceipt, options)
+          : await state.client.callTool({name:message.input.name,arguments:message.input.arguments}, undefined, options)
       send({
         id: message.id,
         result: {
@@ -261,10 +292,18 @@ async function handle(message) {
         version: 1, recorded_at: new Date().toISOString(), code: error.message, ...error.cause.login,
       }) + "\n", { mode: 0o600, flag: "wx" }).catch(() => undefined)
     }
+    if (message.operation === "start" && message.input?.stateDir) {
+      const note = String(error?.message ?? "unknown").replace(/[\r\n]+/g, " ").slice(0, 300)
+      const safe = /bearer|api[_-]?key|password|token|secret/i.test(note) ? "startup failed" : note
+      await writeFile(join(message.input.stateDir, "startup-last-error.txt"), safe + "\n", { mode: 0o600 }).catch(() => undefined)
+    }
     if (message.operation === "start" && error?.message === "MEGALADATA_RUNTIME_CLEANUP_FAILED")
       state.startupCleanupFailed = true
-    const code = /^MEGALADATA_[A-Z_]+$/.test(error?.message ?? "") ? error.message : "MEGALADATA_RUNTIME_FAILED"
-    send({ id: message.id, error: code }, message.operation === "close")
+    const raw = String(error?.message ?? "")
+    const code = /^MEGALADATA_[A-Z_]+$/.test(raw) ? raw
+      : /^(?:Invalid Dock action catalog|Dock catalog read)/.test(raw) ? "MEGALADATA_RUNTIME_START_FAILED"
+      : "MEGALADATA_RUNTIME_FAILED"
+    send({ id: message.id, ...(artifactFailure(error) ?? { error: code }) }, message.operation === "close")
     if (message.operation === "start") {
       // Clean up immediately, but keep IPC until the owner requests an acknowledged close.
       // close() retains a rejection so that the later close request reports cleanup failure.

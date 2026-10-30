@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { Button } from "@megaladata-ai-agent/ui/button"
-import { useDialog } from "@megaladata-ai-agent/ui/context/dialog"
+import { Button } from "@opencode-ai/ui/button"
+import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { createSignal, onMount } from "solid-js"
 import { DialogSelectModelUnpaidV2 } from "./dialog-select-model-unpaid-v2"
 

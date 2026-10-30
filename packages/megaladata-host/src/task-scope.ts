@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { SessionV1 } from "@megaladata-ai-agent/schema/v1/session"
+import { SessionV1 } from "@opencode-ai/schema/v1/session"
 
 export const Profile = Schema.Literals(["default", "package-docs", "megaladata-automation"])
 export type Profile = typeof Profile.Type

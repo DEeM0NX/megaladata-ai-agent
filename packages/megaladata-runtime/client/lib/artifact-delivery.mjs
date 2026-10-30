@@ -1,6 +1,8 @@
 import {storageTidSuffix} from './storage-policy.mjs';
 import {findNativeStorageRow} from './text-export-output.mjs';
 import {createHash} from 'node:crypto';
+import {referenceUploadBudget} from './file-reference.mjs';
+import {operationFailureDiagnostic} from './browser-failure.mjs';
 const requireValue=(value,message)=>{if(!value)throw Error(message);};
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const one=(values,message)=>{requireValue(values.length===1,message);return values[0];};
@@ -14,7 +16,7 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
   requireValue(saved?.phase===phase&&saved.operation_id===job.id,'Delivery evidence was not durably acknowledged');
  };
  const snapshot=job=>structuredClone({operation_id:job.id,state:job.state,phase:job.phase,
-  upload_operation_id:job.uploadId,outcome:job.outcome??null,error:job.error??null});
+  upload_operation_id:job.uploadId,outcome:job.outcome??null,error:job.error??null,...(job.largeUpload?{status:job.status,bytes:job.bytes??0,total_bytes:job.artifact.bytes,percent:job.artifact.bytes?Math.min(100,(job.bytes??0)/job.artifact.bytes*100):job.status==='ready'?100:0,elapsed_ms:now()-job.started,deadline_at:job.deadline,poll_after_ms:5000}: {})});
  const finish=async(job,artifact,final)=>{
   const outcome=final.output?.outcome,proof=outcome?.output?.server_copy_verification;
   requireValue(final.output?.state==='resolved'&&final.output?.cleanup_confirmed===true&&outcome.status==='SUCCEEDED'
@@ -28,13 +30,14 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
   let submitted=job.uploadStarted===true,effectPossible=submitted;
   const preUploadResume=!!resumeId&&job.preUploadResume===true;
   const check=()=>{signal?.throwIfAborted();requireValue(now()<job.deadline,'Artifact delivery deadline elapsed');};
+  const privateDeadline=job.packageUpload||job.largeUpload?{signal,deadlineAt:job.deadline}:{};
   const readPages=async options=>{
-   check();const r=await runtime.observe(options);
+   check();const r=await runtime.observe({...options,...privateDeadline});
    if(r.status!=='SUCCEEDED')throw Object.assign(Error('Delivery observation failed: '+(r.error?.code??r.status)),{code:r.error?.code});
    const output=structuredClone(r.output);let cursor=output.page?.next_cursor,pages=0;
    while(cursor) {
     check();requireValue(++pages<=32,'Delivery observation page limit exceeded');
-    const next=await runtime.observe({cursor});
+    const next=await runtime.observe({cursor,...privateDeadline});
     requireValue(next.status==='SUCCEEDED'&&next.output.observation_id===output.observation_id
       &&JSON.stringify(next.output.dom_epoch)===JSON.stringify(output.dom_epoch),'Delivery observation changed during pagination');
     for(const key of ['elements','dialogs','masks'])output.ui[key]=[...(output.ui[key]??[]),...(next.output.ui[key]??[])];cursor=next.output.page?.next_cursor;
@@ -56,7 +59,7 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
    check();const id=job.id+':nav'+(job.navigationStep=(job.navigationStep??0)+1);
    const previousEffect=effectPossible,previousUncertain=job.navigationUncertain===true;
    job.navigationUncertain=true;
-   effectPossible=true;const r=await runtime.uiAct({verb,ref:element.ref,...extra},{operationId:id,observationId:s.observation_id,signal});
+   effectPossible=true;const r=await runtime.uiAct({verb,ref:element.ref,...extra},{operationId:id,observationId:s.observation_id,signal,...privateDeadline});
    // Only a matched, cleaned-up precondition refusal permits a fresh folder lookup.
    // Never reuse its ref/observation or repeat an uncertain child operation.
    // The proven no-effect gesture leaves navigation certain, so the pre-upload
@@ -122,7 +125,8 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
   try {
    let upload,inspected;
    check();job.phase='preflight';
-   runtime.preflightDeliveredArtifact(artifact);
+   if(job.packageUpload)requireValue(/\.mgp$/i.test(artifact.name)&&artifact.upload.overwrite==='reject','Private package upload requires an admitted .mgp with reject policy');
+   else runtime.preflightDeliveredArtifact(artifact);
    if(resumeId&&!preUploadResume) {
     await acknowledge(job,'artifact_delivery_resume_started',{resume_id:resumeId,upload_operation_id:job.uploadId,
       verification_started:job.verificationStarted===true,deadline_at:job.deadline});
@@ -194,10 +198,20 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
     }
    }
    requireValue(s.file_storage?.directory===artifact.upload.directory,'Authorized destination mismatch');
-   check();runtime.preflightDeliveredArtifact(artifact,s);job.phase='upload';submitted=true;effectPossible=true;job.uploadStarted=true;
+   check();if(!job.packageUpload)runtime.preflightDeliveredArtifact(artifact,s);job.phase='upload';submitted=true;effectPossible=true;job.uploadStarted=true;
+   if(job.largeUpload){
+    job.status='authorizing';await acknowledge(job,'large_upload_source_check');
+    const completed=await runtime.uploadLargeArtifact({artifactId:artifact.artifact_id,grantId:artifact.upload.grant_id,observationId:s.observation_id,operationId:job.uploadId,deliveryOperationId:job.id,deadline:job.deadline,signal,
+     onProgress:progress=>{job.bytes=progress.bytes;job.status=progress.phase;}});
+    requireValue(completed.status==='SUCCEEDED'&&completed.cleanup_complete===true&&completed.upload_completion_verified===true
+     &&completed.destination===artifact.upload.destination&&completed.bytes===artifact.bytes&&completed.source_sha256===artifact.sha256,'Native large-file completion proof mismatch');
+    await acknowledge(job,'large_upload_ready',{result:completed});
+    job.outcome=completed;job.status='ready';job.phase='completed';job.bytes=artifact.bytes;job.error=null;return snapshot(job);
+   }
    job.binding={document:s.dom_epoch?.document,workflow_ref:s.workflow_ref,active_tab_ref:s.active_tab_ref};
-   upload=await runtime.uploadDeliveredArtifact({artifactId:artifact.artifact_id,grantId:artifact.upload.grant_id,
-    observationId:s.observation_id,operationId:job.uploadId,deliveryOperationId:job.id,signal});
+   const uploadOptions={artifactId:artifact.artifact_id,grantId:artifact.upload.grant_id,
+    observationId:s.observation_id,operationId:job.uploadId,deliveryOperationId:job.id,signal};
+   upload=job.packageUpload?await runtime.uploadPackageArtifact({...uploadOptions,deadline:job.deadline}):await runtime.uploadDeliveredArtifact(uploadOptions);
    await acknowledge(job,'artifact_delivery_upload_receipt',{upload});
    if(upload.error?.code==='BROWSER_CALL_UNCERTAIN') {
     check();inspected=await runtime.inspect({operationId:job.uploadId});
@@ -222,7 +236,20 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
     return snapshot(job);
    }
    requireValue(upload.status!=='NOT_APPLIED','Upload refusal requires inspection');
-   check();
+   if(!job.packageUpload)check();
+   if(job.packageUpload&&upload.status==='FAILED'&&upload.output?.conflict_rejected===true&&upload.cleanup_complete===true) {
+    const refused={status:'FAILED',code:'UPLOAD_PATH_CONFLICT',destination:artifact.upload.destination,
+      upload_operation_id:job.uploadId,upload_completion_verified:false,cleanup_complete:true};
+    await acknowledge(job,'artifact_delivery_rejected',{result:refused});job.outcome=refused;job.phase='rejected';job.state='settled';return snapshot(job);
+   }
+   if(job.packageUpload){
+    const completed=await runtime.completePackageArtifact({operationId:job.uploadId});
+    requireValue(completed.status==='SUCCEEDED'&&completed.cleanup_complete===true&&completed.upload_completion_verified===true
+      &&completed.destination===artifact.upload.destination&&completed.bytes===artifact.bytes&&completed.source_sha256===artifact.sha256,
+      'Native package completion proof mismatch');
+    await acknowledge(job,'artifact_delivery_completed',{result:completed});
+    job.outcome=completed;job.phase='completed';job.error=null;return snapshot(job);
+   }
    job.conflictRejected=artifact.upload.overwrite==='reject'&&upload.status==='FAILED'
      &&upload.output?.conflict_rejected===true&&upload.output.upload_submitted===false&&upload.cleanup_complete===true;
    if(!job.conflictRejected){
@@ -247,6 +274,20 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
    if(lostVerification)await acknowledge(job,'artifact_delivery_verification_reconciled',{inspection:final});
    await finish(job,artifact,final);
   } catch(error) {
+   if(job.largeUpload){
+    try{await acknowledge(job,'large_upload_failed',{failed_phase:job.phase,upload_started:job.uploadStarted===true,
+     cause:operationFailureDiagnostic(error)});}catch{ /* Diagnostics cannot prevent native cleanup. */ }
+    job.status='cancelling';
+    let cleanup=false;
+    try{cleanup=!job.uploadStarted?job.navigationUncertain!==true:await runtime.cancelLargeArtifact({operationId:job.uploadId,deadline:now()+30000});}
+    catch(cleanupError){try{await acknowledge(job,'large_upload_cleanup_failed',{cause:operationFailureDiagnostic(cleanupError)});}catch{}}
+    const cancelled=signal?.aborted===true&&cleanup;
+    job.status=!cleanup?'uncertain':cancelled?'cancelled':'failed';job.phase=job.status;
+    const code=!cleanup?'MEGALADATA_UPLOAD_UNCERTAIN':cancelled?'MEGALADATA_UPLOAD_CANCELLED':error.message==='MEGALADATA_FILE_CHANGED'?'MEGALADATA_FILE_CHANGED':'MEGALADATA_UPLOAD_FAILED';
+    job.error={code,message:code};job.outcome={status:cleanup?'FAILED':'AMBIGUOUS',code,cleanup_complete:cleanup,effect_possible:!cleanup,upload_completion_verified:false};
+    try{await acknowledge(job,'large_upload_'+job.status,{result:job.outcome});}catch{job.status='uncertain';job.phase='uncertain';job.error={code:'MEGALADATA_UPLOAD_UNCERTAIN',message:'MEGALADATA_UPLOAD_UNCERTAIN'};job.outcome={...job.outcome,status:'AMBIGUOUS',code:'MEGALADATA_UPLOAD_UNCERTAIN',cleanup_complete:false,effect_possible:true};}
+    return snapshot(job);
+   }
    // A known Skip wrote nothing. If its current bytes cannot be compared,
    // retain the original conflict. Unknown download cleanup stays uncertain.
    if(job.conflictRejected&&(!job.verificationStarted||job.verificationState==='settled')){
@@ -283,29 +324,36 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
  }
  return Object.freeze({
   get busy(){return active!==null;},
+  get blocksMutations(){return [...jobs.values()].some(job=>job.largeUpload&&job.status==='uncertain');},
   // Confirmed navigation remains an effect, but its acknowledged pre-upload
   // checkpoint can resume without putting the managed host into recovery.
   get unsettled(){return active!==null || [...jobs.values()].some(job=>job.phase!=='completed' && job.outcome?.effect_possible===true
     && !(job.preUploadResume===true && job.outcome.inspection_required===false && job.outcome.cleanup_complete===true));},
-  deliver(request,{signal}={}) {
+  deliver(request,{signal,packageUpload=false}={}) {
    requireValue(request&&Object.keys(request).sort().join(',')==='artifact_id,budget_ms,operation_id,upload_grant_id','Exact delivery request required');
    requireValue(typeof request.operation_id==='string'&&/^[A-Za-z0-9_.:-]{1,80}$/.test(request.operation_id),'Bounded delivery ID required');
    requireValue(Number.isInteger(request.budget_ms)&&request.budget_ms>=1000&&request.budget_ms<=1800000,'Delivery budget must be 1000..1800000 ms');
-   const signature=hash([request.artifact_id,request.upload_grant_id,request.budget_ms]),previous=jobs.get(request.operation_id);
-   if(previous){requireValue(previous.signature===signature,'Delivery ID has different parameters');return previous.promise;}
-   requireValue(!active,'Another artifact delivery is in progress');signal?.throwIfAborted();
+   const signature=hash([request.artifact_id,request.upload_grant_id,request.budget_ms,...(packageUpload?['local-package']:[])]),previous=jobs.get(request.operation_id);
+   if(previous){requireValue(previous.signature===signature,'Delivery ID has different parameters');return previous.largeUpload?snapshot(previous):previous.promise;}
+   requireValue(!active&&!([...jobs.values()].some(job=>job.largeUpload&&job.status==='uncertain')),'Another artifact delivery is in progress or uncertain');signal?.throwIfAborted();
    requireValue(artifactStore,'Artifact delivery requires an admitted artifact store');
    const artifact=artifactStore.getUploadGrant(request.artifact_id,request.upload_grant_id);
    requireValue(['replace','reject'].includes(artifact.upload.overwrite),'Unsupported upload conflict policy');
    admit(request.operation_id,signature);
-   const job={artifact:structuredClone(artifact),resumeRequests:new Map(),id:request.operation_id,uploadId:request.operation_id+':upload',signature,state:'running',phase:'prepared',deadline:now()+request.budget_ms};
-   jobs.set(job.id,job);active=job;job.promise=run(job,artifact,signal);return job.promise;
+   const largeUpload=!packageUpload&&artifact.bytes>16*1024*1024,controller=new AbortController();
+   const job={artifact:structuredClone(artifact),resumeRequests:new Map(),id:request.operation_id,uploadId:request.operation_id+':upload',signature,state:'running',phase:'prepared',deadline:now()+(largeUpload?referenceUploadBudget(artifact.bytes):request.budget_ms),packageUpload,largeUpload,controller,started:now(),status:'authorizing',bytes:0};
+   jobs.set(job.id,job);active=job;
+   // The worker owns cancellation after admission; a completed start request's
+   // transport signal must not end a background transfer. Shutdown drains it.
+   job.promise=largeUpload?Promise.resolve().then(()=>run(job,artifact,controller.signal)):run(job,artifact,signal);
+   return largeUpload?snapshot(job):job.promise;
   },
   resume(request,{signal}={}) {
    requireValue(request&&Object.keys(request).sort().join(',')==='budget_ms,operation_id,resume_id','Exact delivery resume request required');
    requireValue(typeof request.resume_id==='string'&&/^[A-Za-z0-9_.:-]{1,80}$/.test(request.resume_id),'Bounded resume ID required');
    requireValue(Number.isInteger(request.budget_ms)&&request.budget_ms>=1000&&request.budget_ms<=1800000,'Delivery resume budget must be 1000..1800000 ms');
    const job=jobs.get(request.operation_id);requireValue(job,'Unknown delivery operation in this session');
+   requireValue(!job.largeUpload,'Large uploads use status/cancel; unresolved bytes cannot be resent');
    const signature=hash(request),prior=job.resumeRequests.get(request.resume_id);
    if(prior){requireValue(prior.signature===signature,'Resume ID has different parameters');return prior.promise;}
    requireValue(!active,'Another delivery or resume is in progress');signal?.throwIfAborted();
@@ -320,5 +368,9 @@ export function createArtifactDelivery({runtime,artifactStore,record,admit,admit
    job.resumeRequests.set(request.resume_id,{signature,promise});return promise;
   },
   status(id){const job=jobs.get(id);requireValue(job,'Unknown delivery operation');return snapshot(job);},
+  cancel(id){const job=jobs.get(id);requireValue(job?.largeUpload,'Unknown asynchronous upload');if(job.state==='running'){job.status='cancelling';job.controller.abort();}return snapshot(job);},
+  interrupt(){for(const job of jobs.values())if(job.largeUpload&&job.state==='running'){job.status='cancelling';job.controller.abort();}},
+  async drain(){await Promise.all([...jobs.values()].map(job=>job.promise));},
+  async close(){for(const job of jobs.values())if(job.largeUpload&&job.state==='running'){job.status='cancelling';job.controller.abort();}await Promise.all([...jobs.values()].map(job=>job.promise));requireValue(![...jobs.values()].some(job=>job.largeUpload&&job.status==='uncertain'),'MEGALADATA_UPLOAD_UNCERTAIN');},
  });
 }

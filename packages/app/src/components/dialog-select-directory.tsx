@@ -1,15 +1,15 @@
-import { useDialog } from "@megaladata-ai-agent/ui/context/dialog"
-import { Dialog } from "@megaladata-ai-agent/ui/dialog"
-import { FileIcon } from "@megaladata-ai-agent/ui/file-icon"
-import { List } from "@megaladata-ai-agent/ui/list"
-import type { ListRef } from "@megaladata-ai-agent/ui/list"
-import { getDirectory, getFilename } from "@megaladata-ai-agent/core/util/path"
+import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { Dialog } from "@opencode-ai/ui/dialog"
+import { FileIcon } from "@opencode-ai/ui/file-icon"
+import { List } from "@opencode-ai/ui/list"
+import type { ListRef } from "@opencode-ai/ui/list"
+import { getDirectory, getFilename } from "@opencode-ai/core/util/path"
 import { createMemo, createResource, createSignal } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { ServerConnection } from "@/context/server"
 import { useGlobal } from "@/context/global"
 import { cleanPickerInput, createDirectorySearch, displayPickerPath } from "./directory-picker-domain"
-import type { Path } from "@megaladata-ai-agent/sdk/v2/client"
+import type { Path } from "@opencode-ai/sdk/v2/client"
 
 interface DialogSelectDirectoryProps {
   title?: string

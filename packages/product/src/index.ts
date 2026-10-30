@@ -12,8 +12,6 @@ export const Product = Object.freeze({
   database: "megaladata-ai-agent.db",
   updateFeed: null as string | null,
   changelogFeed: null as string | null,
-  documentation: "https://github.com",
-  support: "https://github.com",
   artifactName: "megaladata-ai-agent-${os}-${arch}.${ext}",
   knowledgeEndpoint: "https://mcp.megaladata.ai/mcp",
   connection: Object.freeze({ url: "https://app.megaladata.ai", username: "user" }),

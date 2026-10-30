@@ -24,6 +24,68 @@ confirmed Save. `existing_workflow` accepts only a reference issued by this
 runtime: chat history and diagnostics do not replace it. Do not create a new
 draft instead of continuing; if preparation is pending, follow recovery first.
 
+If the user explicitly asks to upload a full attached file before preparing a
+server source, deliver it before creating a sample: `megaladata_file_admit` of
+the original path, then `dock_artifact_deliver`, then
+`dock_artifact_delivery_status` until `ready`. Use the confirmed `destination`
+and do not upload that full file again. After delivery, treat it as the server
+source for the rest of the cycle.
+
+To edit a local `.mgp` from a path or attachment, call
+`megaladata_dock_prepare({intent: "open_package", local_package_path: "the exact path"})`.
+That call uploads the agent's own server copy and opens it; a separate package
+delivery is not required. Use the confirmed `workspace.package_ref.path`. For a
+package that is already on the server, pass `package_path`. Do not register
+`.mgp` packages with `megaladata_file_admit`. If the upload is confirmed but
+open fails, follow the returned `next_step` with the server path and the
+original `operation_id`. A new local-path call uploads another copy.
+
+## Uploading a file only
+
+If the user only asks to upload or place a file in Megaladata, deliver that
+source file and stop. After preparation, register the exact source path with
+`megaladata_file_admit` and call `megaladata_dock_artifact_deliver` once with a
+stable `operation_id`. For an inline attachment that is already prepared, use
+its `artifact_id`. For a large file, wait for `upload_status: ready` through
+`megaladata_dock_artifact_delivery_status` with the same id, no more than once
+every 5 seconds. If the result is uncertain, follow that operation's recovery
+and do not upload again. Report the confirmed storage path and size from the
+delivery result. Do not create or configure nodes, run a calculation, or save
+a package unless the user asks. A later step, such as import or building a
+scenario, may be offered in words. A profile, scan, and sample are not required
+for a plain delivery. The cycle "profile, sample, scenario, full calculation,
+Save" below applies only when the user asks to build or run a calculation.
+
+## Loading data for a calculation
+
+When small data files are given as paths in the prompt, register each one after
+preparation with `megaladata_file_admit({path: "the exact path"})`. Then deliver
+its artifact with `megaladata_dock_artifact_deliver` and import the confirmed
+destination. Several paths, including the same file name in different
+directories, need separate registrations. After preparation is repeated,
+register the files again: earlier `artifact_id` values cannot be reused.
+
+To build a calculation on a large file — a path in the message, a Desktop
+attachment, or CLI `--file` — first take a profile (`megaladata_file_profile`)
+and an exact pass (`megaladata_file_scan`), create a sample, and debug the
+scenario on it. Then register the full file from its original path. A file
+larger than 16 MiB is sent by a private reference, without bytes or base64 in
+IPC. Call `megaladata_dock_artifact_deliver` once with a stable `operation_id`.
+That call starts the upload. Wait for `upload_status: ready`, polling
+`megaladata_dock_artifact_delivery_status` no more than once every 5 seconds
+with the same id. Progress reports bytes, percent, and time. To cancel, call
+`megaladata_dock_artifact_delivery_cancel`, then status until `cancelled` or
+`uncertain`. On `uncertain`, do not start another upload and do not change the
+scenario. After ready, point the existing source at the confirmed destination,
+run one calculation, and check the full row count and the business result as
+described below. Then Save. Keep the sample check and the full-file check
+distinct.
+
+If a local file fails, report the reason and path from the tool result. Add
+"attach the file — `--file` in the CLI, or an attachment in Desktop/TUI" only
+when a permission request was denied. Do not add that hint for a missing file,
+a directory, an OS permission error, or an explicit settings denial.
+
 Name components with the English catalog titles, for example Calculator
 (`transform.calculator`), Row Filter (`transform.filter_data`), Grouping
 (`transform.group_data`), Sort (`transform.sorting`), Cross Table

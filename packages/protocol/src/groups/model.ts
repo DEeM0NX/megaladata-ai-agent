@@ -1,5 +1,5 @@
-import { Model } from "@megaladata-ai-agent/schema/model"
-import { Location } from "@megaladata-ai-agent/schema/location"
+import { Model } from "@opencode-ai/schema/model"
+import { Location } from "@opencode-ai/schema/location"
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { ServiceUnavailableError } from "../errors"

@@ -8,7 +8,7 @@ const checks = [
   { package: "product", args: ["typecheck"] },
   { package: "megaladata-host", args: ["typecheck"] },
   { package: "desktop", args: ["typecheck"] },
-  { package: "agent", args: ["typecheck"] },
+  { package: "opencode", args: ["typecheck"] },
 ]
 const results = []
 for (const check of checks) {

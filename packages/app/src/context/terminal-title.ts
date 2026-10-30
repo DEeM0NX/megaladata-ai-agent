@@ -3,6 +3,7 @@ const template = "Terminal {{number}}"
 const numbered = [
   template,
   "محطة طرفية {{number}}",
+  "Терминал {{number}}",
   "ターミナル {{number}}",
   "터미널 {{number}}",
   "เทอร์มินัล {{number}}",

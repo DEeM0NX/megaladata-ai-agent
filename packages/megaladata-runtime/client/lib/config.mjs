@@ -3,7 +3,10 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { normalizeConfigPath } from '../../examples/memory-plugin-shared/lib/mcp-proxy-config.mjs';
 import { privatePath } from './platform.mjs';
+import { ACTION_CATALOG_ROOT } from './action-catalog.mjs';
 import { storageDirectories, storagePath } from './storage-policy.mjs';
+
+const SHA256 = /^[a-f0-9]{64}$/;
 
 export async function loadConfig({ configPath, stateDir, agent, adapterRevision, mode,
   resources = process.env.MEGALADATA_AI_AGENT_RESOURCES,
@@ -37,7 +40,14 @@ export async function loadConfig({ configPath, stateDir, agent, adapterRevision,
   if (!['classic', 'executor-preview', 'executor-replay', 'research'].includes(mode)) {
     throw new Error('Dock mode must be classic, executor-preview, executor-replay or research');
   }
-  if (mode !== 'executor-replay' && (actionManifestUri !== null || actionManifestSha256 !== null)) {
+  if (mode === 'executor-replay') {
+    const escaped = ACTION_CATALOG_ROOT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (typeof actionManifestUri !== 'string'
+        || !new RegExp(`^${escaped}/releases/[0-9A-Za-z.+-]+/manifest\\.json$`).test(actionManifestUri)
+        || !SHA256.test(actionManifestSha256 ?? '')) {
+      throw new Error('executor-replay requires an exact Dock catalog manifest URI and SHA-256 pin');
+    }
+  } else if (actionManifestUri !== null || actionManifestSha256 !== null) {
     throw new Error('An explicit action manifest is only allowed in executor-replay');
   }
   if (replayBootstrap && mode !== 'executor-replay') throw new Error('Replay bootstrap is only allowed in executor-replay');

@@ -1,11 +1,11 @@
 import { EventEmitter } from "node:events"
 import { isAbsolute } from "node:path"
 import { Option, Schema } from "effect"
-import { Megaladata } from "@megaladata-ai-agent/schema/megaladata"
+import { Megaladata } from "@opencode-ai/schema/megaladata"
 import { createMegaladataHost } from "./host"
 import { megaladataHostPort, type HostPort } from "./host-port"
 import { cliCredentials } from "./connection/cli-credentials"
-import { hostError } from "./errors"
+import { hostFailure } from "./errors"
 
 if (!process.send) throw new Error("MEGALADATA_PRIVATE_IPC_REQUIRED")
 
@@ -126,7 +126,7 @@ async function dispatch(message: unknown) {
     const result = await management(message.method, input, state.host)
     reply({ id: message.id, result })
   } catch (error) {
-    reply({ id: message.id, error: hostError(error) })
+    reply({ id: message.id, ...hostFailure(error) })
   }
 }
 

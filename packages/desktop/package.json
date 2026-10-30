@@ -1,7 +1,7 @@
 {
-  "name": "@megaladata-ai-agent/desktop",
+  "name": "@opencode-ai/desktop",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.7",
   "type": "module",
   "license": "MIT AND AGPL-3.0-only",
   "author": {
@@ -17,7 +17,7 @@
     "preview": "electron-vite preview",
     "package": "electron-builder --config electron-builder.config.ts",
     "package:mac": "electron-builder --mac --config electron-builder.config.ts",
-    "package:win": "bun --bun electron-builder --win --config electron-builder.config.ts",
+    "package:win": "electron-builder --win --config electron-builder.config.ts",
     "package:linux": "electron-builder --linux --config electron-builder.config.ts"
   },
   "main": "./out/main/index.js",
@@ -34,8 +34,8 @@
   "devDependencies": {
     "@actions/artifact": "4.0.0",
     "@lydell/node-pty": "catalog:",
-    "@megaladata-ai-agent/app": "workspace:*",
-    "@megaladata-ai-agent/ui": "workspace:*",
+    "@opencode-ai/app": "workspace:*",
+    "@opencode-ai/ui": "workspace:*",
     "@sentry/solid": "catalog:",
     "@sentry/vite-plugin": "catalog:",
     "@solid-primitives/i18n": "2.2.1",
@@ -56,7 +56,7 @@
     "vite": "catalog:",
     "zod-openapi": "5.4.6",
     "@megaladata-ai-agent/product": "workspace:*",
-    "@megaladata-ai-agent/schema": "workspace:*",
+    "@opencode-ai/schema": "workspace:*",
     "@megaladata-ai-agent/megaladata-host": "workspace:*"
   },
   "optionalDependencies": {

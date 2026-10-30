@@ -52,17 +52,13 @@ const archiver = process.platform === "win32" ? join(systemRoot!, "System32/tar.
 const source = await cliSourceSnapshot(repo)
 const work = await mkdtemp(join(dirname(destination), ".cli-build-"))
 try {
-  await buildPhase(
-    "cli-standalone",
-    () =>
-      $`${process.execPath} script/build.ts --standalone --single --skip-install ${baseline ? ["--baseline"] : []}`
-        .cwd(join(repo, "packages/agent"))
-        .env({
-          ...process.env,
-          MEGALADATA_AI_AGENT_CHANNEL: process.env.MEGALADATA_AI_AGENT_CHANNEL ?? "dev",
-          MEGALADATA_AI_AGENT_BUILD_OUTPUT: join(work, "native"),
-        }),
-  )
+  await $`${process.execPath} script/build.ts --standalone --single --skip-install ${baseline ? ["--baseline"] : []}`
+    .cwd(join(repo, "packages/opencode"))
+    .env({
+      ...process.env,
+      MEGALADATA_AI_AGENT_CHANNEL: process.env.MEGALADATA_AI_AGENT_CHANNEL ?? "dev",
+      MEGALADATA_AI_AGENT_BUILD_OUTPUT: join(work, "native"),
+    })
   const artifact = join(
     work,
     `native/megaladata-ai-agent-cli-${process.platform === "win32" ? "windows" : process.platform}-${process.arch}${baseline ? "-baseline" : ""}`,
@@ -71,15 +67,8 @@ try {
   if (process.platform === "darwin") {
     // Bun supplies its JSC runtime entitlements. Retain them while signing our
     // compiled executable, and never re-sign vendor Node or Chromium resources.
-    await buildPhase(
-      "cli-sign",
-      () =>
-        $`/usr/bin/codesign --force --sign - --timestamp=none --identifier com.megaladata.aiagent.cli --preserve-metadata=entitlements ${join(artifact, "bin/megaladata-ai-agent-cli")}`,
-    )
-    await buildPhase(
-      "cli-sign-verify",
-      () => $`/usr/bin/codesign --verify --strict ${join(artifact, "bin/megaladata-ai-agent-cli")}`,
-    )
+    await $`/usr/bin/codesign --force --sign - --timestamp=none --identifier com.megaladata.aiagent.cli --preserve-metadata=entitlements ${join(artifact, "bin/megaladata-ai-agent-cli")}`
+    await $`/usr/bin/codesign --verify --strict ${join(artifact, "bin/megaladata-ai-agent-cli")}`
   }
   await buildPhase("cli-resource-staging", () =>
     stageResources({
@@ -94,7 +83,7 @@ try {
   await buildPhase("cli-installer", () => buildCliInstaller(artifact, process.platform as "linux" | "darwin" | "win32"))
   await buildPhase("cli-notices", async () =>
     collectBuildNotices(join(artifact, "licenses/bundled-npm"), [
-      { root: join(repo, "packages/agent"), metafile: await Bun.file(join(artifact, "build-inputs.json")).json() },
+      { root: join(repo, "packages/opencode"), metafile: await Bun.file(join(artifact, "build-inputs.json")).json() },
       {
         // Bun's host metafile paths are relative to this caller's working directory.
         root: process.cwd(),

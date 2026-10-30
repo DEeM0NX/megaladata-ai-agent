@@ -1,4 +1,3 @@
-import { Product } from "@megaladata-ai-agent/product"
 import type { DesktopNativeKey } from "./i18n/desktop-native"
 
 export type DesktopMenuPlatform = "macos" | "windows"
@@ -279,20 +278,7 @@ export const DESKTOP_MENU: DesktopMenu[] = [
   {
     id: "help",
     labelKey: "desktop.menu.help",
-    items: [
-      { type: "item", labelKey: "desktop.menu.exportLogs", command: "logs.export" },
-      { type: "separator" },
-      {
-        type: "item",
-        labelKey: "desktop.menu.shareFeedback",
-        href: Product.support,
-      },
-      {
-        type: "item",
-        labelKey: "desktop.menu.reportBug",
-        href: Product.support,
-      },
-    ],
+    items: [{ type: "item", labelKey: "desktop.menu.exportLogs", command: "logs.export" }],
   },
 ]
 

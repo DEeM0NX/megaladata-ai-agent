@@ -15,7 +15,7 @@ export async function loadFont(url: URL, name: string) {
   const advances = Array.from({ length: count }, (_, index) => tables.hmtx.readUInt16BE(index * 4))
   const glyphOf = cmap(tables.cmap)
   const glyph = (character: string) => glyphOf(character.codePointAt(0)!)
-  if (!units || !count || !glyph("A")) throw Error("PACKAGE_DOCS_FONT_INVALID")
+  if (!units || !count || !glyph("A") || !glyph("А")) throw Error("PACKAGE_DOCS_FONT_INVALID")
   return { data, name, units, bbox, advances, glyph,
     ascent: tables.hhea.readInt16BE(4), descent: tables.hhea.readInt16BE(6),
     width: (character: string, size: number) => advances[Math.min(glyph(character), advances.length - 1)] * size / units }

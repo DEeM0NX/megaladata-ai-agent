@@ -1,5 +1,5 @@
-import { FileSystem } from "@megaladata-ai-agent/core/filesystem"
-import { RelativePath } from "@megaladata-ai-agent/core/schema"
+import { FileSystem } from "@opencode-ai/core/filesystem"
+import { RelativePath } from "@opencode-ai/core/schema"
 import { Effect } from "effect"
 import { HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"

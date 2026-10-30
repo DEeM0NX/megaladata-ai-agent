@@ -52,6 +52,7 @@ const config: Configuration = {
   },
   directories: { output: "dist", buildResources: "resources" },
   extraMetadata: {
+    name: `${Product.namespace}/desktop`,
     productName: productName(channel),
     desktopName: `${appId}.desktop`,
     ...(process.env.MEGALADATA_AI_AGENT_VERSION ? { version: process.env.MEGALADATA_AI_AGENT_VERSION } : {}),

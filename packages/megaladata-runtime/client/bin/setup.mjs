@@ -116,7 +116,7 @@ try {
   }
   if (!values.bundle || !['codex', 'hermes'].includes(values.agent)) throw new Error('Specify the release bundle and agent');
   const bundle = resolve(values.bundle), manifest = await verifyBundle(bundle);
-  stage = 'checking the installed agent';
+  stage = 'preparing the browser';
   const agentVersion = agentLauncher.run(['--version'], { encoding: 'utf8', windowsHide: true });
   guidance = agentVersionGuidance(values.agent, agentVersion);
   if (guidance) throw new Error('Agent preflight failed');
@@ -174,7 +174,7 @@ try {
   }
   const health = await response.json();
   if (!health.healthy || health.account_id !== 'megaladata-dock' || health.user_id !== 'megaladata-dock' || health.role !== 'user') throw new Error('Unexpected Dock server identity');
-  stage = 'preparing the browser';
+  stage = 'final diagnostics';
   run(process.execPath, [join(bundle, 'client/bin/install-browser.mjs'), '--state-dir', root]);
   // Prepare the browser and authenticate before changing the active release.
   const previousRelease = await readRuntimePointer(root);

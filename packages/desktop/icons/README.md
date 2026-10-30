@@ -1,8 +1,10 @@
 # Megaladata AI Agent icons
 
 Editable SVG masters separate the full mark, the compact mark, and the platform
-tiles. Desktop icons are transparent outside the tile. The full mark is a cyan
-M (`#01A9C1`) with dark AI underneath; the compact mark is the M alone.
+tiles. Desktop icons are transparent outside the tile. The full mark is a white
+shark profile (`#E7FDFF`) and a cyan ring (`#32DCF5`) on a deep teal tile
+(`#062833`). The compact mark is a filled shark profile without the ring. Glow,
+motion blur, and the fine teeth are omitted so the sign stays legible when small.
 
 From `packages/desktop`, using the repository's pinned Bun:
 
@@ -25,8 +27,10 @@ and colored backgrounds.
 - macOS: softly rounded tile and restrained shadow; ICNS classic slots 16–1024
   plus 16pt/32pt/128pt/256pt Retina slots. `dock.png` matches the 1024px ICNS
   frame and is used only in development; installed apps use their bundle ICNS.
-- Small 16–32px frames and small macOS Retina slots use M. Larger system frames
-  use M + AI. Favicons consistently use M, including scalable SVG.
+- Frames of 16–32px, the scalable favicon, and the macOS 16pt Retina slot use
+  the filled profile. From 48px, including the 32pt Retina slot, frames use the
+  ring and the line shark. The 16px and 32px favicon PNGs follow the compact
+  mark; the 96px favicon PNG uses the full mark.
 - Apple touch is 180px and opaque. PWA assets are 192/512px with separate
   transparent `any` and opaque `maskable` images. Maskable artwork stays inside
   the central 80%-diameter safe circle. Desktop tile PNGs must not be reused as

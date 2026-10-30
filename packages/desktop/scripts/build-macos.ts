@@ -6,13 +6,15 @@ import { fileHash } from "./release/manifest"
 import { buildCommand } from "./build-command"
 import { productName } from "@megaladata-ai-agent/product"
 import pins from "../../product/megaladata-release.json"
+import { packageManager } from "../../../package.json"
 
 // This is the common local/CI entry. Tool provisioning happens before this script.
 const args = parseArgs({ options: { output: { type: "string" }, version: { type: "string" } } }).values
 if (!args.output || !args.version || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(args.version))
   throw Error("Required: --output <new candidate directory> --version <semver>")
-if (process.platform !== "darwin" || process.arch !== "arm64" || Bun.version !== "1.3.14")
-  throw Error("Build requires macOS arm64 and Bun 1.3.14")
+const bunVersion = packageManager.replace("bun@", "")
+if (process.platform !== "darwin" || process.arch !== "arm64" || Bun.version !== bunVersion)
+  throw Error(`Build requires macOS arm64 and Bun ${bunVersion}`)
 const root = resolve(import.meta.dir, "../../..")
 const desktop = join(root, "packages/desktop")
 const output = resolve(args.output)
@@ -51,8 +53,9 @@ await buildCommand({
   args: ["script/build-cli.ts", join(output, "cli")],
   cwd: join(root, "packages/megaladata-host"),
   env,
-  // Compiling the CLI, copying Chromium, and archiving do not fit in 10 minutes on macos-14.
-  timeout: 30 * 60_000,
+  // The macOS arm64 runner needs more than 10 minutes to compile the standalone CLI.
+  // The workflow step still ends at 75 minutes.
+  timeout: 40 * 60_000,
 })
 await $`git archive --format=tar.gz --output=${join(output, `megaladata-ai-agent-${args.version}-macos-source.tar.gz`)} ${commit}`.cwd(
   root,

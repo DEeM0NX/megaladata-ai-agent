@@ -16,9 +16,9 @@ import { Dynamic } from "solid-js/web"
 import { useNavigate } from "@solidjs/router"
 import { useMutation } from "@tanstack/solid-query"
 import { createVirtualizer, defaultRangeExtractor, elementScroll, type VirtualItem } from "@tanstack/solid-virtual"
-import { Accordion } from "@megaladata-ai-agent/ui/accordion"
-import { Button } from "@megaladata-ai-agent/ui/button"
-import { Card } from "@megaladata-ai-agent/ui/card"
+import { Accordion } from "@opencode-ai/ui/accordion"
+import { Button } from "@opencode-ai/ui/button"
+import { Card } from "@opencode-ai/ui/card"
 import {
   ContextToolGroup,
   Message,
@@ -26,41 +26,41 @@ import {
   Part as MessagePart,
   partDefaultOpen,
   type UserActions,
-} from "@megaladata-ai-agent/session-ui/message-part"
-import { DiffChanges } from "@megaladata-ai-agent/ui/diff-changes"
-import { FileIcon } from "@megaladata-ai-agent/ui/file-icon"
-import { Icon } from "@megaladata-ai-agent/ui/icon"
-import { IconButton } from "@megaladata-ai-agent/ui/icon-button"
-import { Icon as IconV2 } from "@megaladata-ai-agent/ui/v2/icon"
-import { IconButtonV2 } from "@megaladata-ai-agent/ui/v2/icon-button-v2"
-import { DropdownMenu } from "@megaladata-ai-agent/ui/dropdown-menu"
-import { MenuV2 } from "@megaladata-ai-agent/ui/v2/menu-v2"
-import { Dialog } from "@megaladata-ai-agent/ui/dialog"
-import { DialogFooter, DialogHeader, DialogTitleGroup, DialogV2 } from "@megaladata-ai-agent/ui/v2/dialog-v2"
-import { InlineInput } from "@megaladata-ai-agent/ui/inline-input"
-import { ButtonV2 } from "@megaladata-ai-agent/ui/v2/button-v2"
-import { SessionRetry } from "@megaladata-ai-agent/session-ui/session-retry"
-import { isScrollKeyTarget, scrollKey, scrollKeyOwner, ScrollView } from "@megaladata-ai-agent/ui/scroll-view"
-import { StickyAccordionHeader } from "@megaladata-ai-agent/ui/sticky-accordion-header"
-import { TextField } from "@megaladata-ai-agent/ui/text-field"
-import { TextReveal } from "@megaladata-ai-agent/ui/text-reveal"
-import { TextShimmer } from "@megaladata-ai-agent/ui/text-shimmer"
+} from "@opencode-ai/session-ui/message-part"
+import { DiffChanges } from "@opencode-ai/ui/diff-changes"
+import { FileIcon } from "@opencode-ai/ui/file-icon"
+import { Icon } from "@opencode-ai/ui/icon"
+import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
+import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
+import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
+import { MenuV2 } from "@opencode-ai/ui/v2/menu-v2"
+import { Dialog } from "@opencode-ai/ui/dialog"
+import { DialogFooter, DialogHeader, DialogTitleGroup, DialogV2 } from "@opencode-ai/ui/v2/dialog-v2"
+import { InlineInput } from "@opencode-ai/ui/inline-input"
+import { ButtonV2 } from "@opencode-ai/ui/v2/button-v2"
+import { SessionRetry } from "@opencode-ai/session-ui/session-retry"
+import { isScrollKeyTarget, scrollKey, scrollKeyOwner, ScrollView } from "@opencode-ai/ui/scroll-view"
+import { StickyAccordionHeader } from "@opencode-ai/ui/sticky-accordion-header"
+import { TextField } from "@opencode-ai/ui/text-field"
+import { TextReveal } from "@opencode-ai/ui/text-reveal"
+import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
 import type {
   AssistantMessage,
   Message as MessageType,
   Part as PartType,
   ToolPart,
   UserMessage,
-} from "@megaladata-ai-agent/sdk/v2"
+} from "@opencode-ai/sdk/v2"
 import { showToast } from "@/utils/toast"
 import { downloadSessionExport, fetchSessionExport, sessionExportFilename } from "@/utils/session-export"
-import { getDirectory, getFilename } from "@megaladata-ai-agent/core/util/path"
+import { getDirectory, getFilename } from "@opencode-ai/core/util/path"
 import { Popover as KobaltePopover } from "@kobalte/core/popover"
-import { normalize } from "@megaladata-ai-agent/session-ui/session-diff"
-import { useFileComponent } from "@megaladata-ai-agent/ui/context/file"
+import { normalize } from "@opencode-ai/session-ui/session-diff"
+import { useFileComponent } from "@opencode-ai/ui/context/file"
 import { shouldMarkBoundaryGesture, normalizeWheelDelta } from "@/pages/session/message-gesture"
 import { SessionContextUsage } from "@/components/session-context-usage"
-import { useDialog } from "@megaladata-ai-agent/ui/context/dialog"
+import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { useLanguage } from "@/context/language"
 import { useSessionKey } from "@/pages/session/session-layout"
 import { useSessionArchive } from "@/pages/session/session-archive"
@@ -299,7 +299,8 @@ export function MessageTimeline(props: {
   const titleValue = createMemo(() => info()?.title)
   const titleLabel = createMemo(() => sessionTitle(titleValue()))
   const shareUrl = createMemo(() => info()?.share?.url)
-  const shareEnabled = createMemo(() => sync().data.config.share !== "disabled")
+  // Session sharing was discontinued; keep the share menu and popover hidden.
+  const shareEnabled = () => false
   const parentID = createMemo(() => info()?.parentID)
   const parent = createMemo(() => {
     const id = parentID()

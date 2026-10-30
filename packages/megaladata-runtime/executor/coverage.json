@@ -1,0 +1,5772 @@
+{
+  "schema_version": 1,
+  "scope": "post-mvp-required",
+  "inventory_completeness": {
+    "e2e_component_labels": "complete_for_pinned_node_namespace",
+    "live_catalog": "77 observed entries in 12 groups; hidden/virtualized completeness not proven",
+    "help_modes": "77_component_documents_bound; detailed_mode_review_partial",
+    "not_a_release_attestation": true
+  },
+  "statuses": [
+    "planned",
+    "implemented",
+    "live_verified",
+    "released",
+    "blocked",
+    "unsupported"
+  ],
+  "sources": {
+    "e2e-labels": {
+      "repository": "e2e-tests",
+      "commit": "2cad5602158fd2e4836d821d644a2b8d92f571a2",
+      "path": "bg/labels.ts",
+      "sha256": "059353e36203ba86c8f27edbebcfa4d87093579b5c1615f57f9e66a79f4783ea",
+      "attribution": "Megaladata E2E tests, BaseGroup Labs"
+    },
+    "scope-plan": {
+      "path": "docs/plans/2026-09-02-megaladata-dock-implementation-plan-history-through-2026-09-07.md"
+    },
+    "megaladata-help": {
+      "repository": "megaladata-help",
+      "commit": "353e506ba04b77a2926d8ddf8472b36c684b67fd",
+      "attribution": "Megaladata Help, BaseGroup Labs",
+      "scope": "reviewed component documents; does not establish runtime availability"
+    },
+    "live-palette": {
+      "path": "executor/inventory/palette-2026-09-05.json",
+      "sha256": "256e7faa65c7d9ea9c0f344b7e5f87c0e3e18e92f785a9a2c4489beb5b189baf",
+      "scope": "observed names only; not configuration, execution or licensing proof"
+    }
+  },
+  "contracts": {
+    "component_pipeline": {
+      "inputs": [
+        "owned_node_ref",
+        "typed_settings",
+        "authorized_input_artifacts"
+      ],
+      "outputs": [
+        "settings_readback",
+        "execution_identity",
+        "schema_and_data_proof",
+        "reopened_settings_and_result"
+      ],
+      "effects": [
+        "configure",
+        "execute",
+        "inspect",
+        "save"
+      ],
+      "ownership": "Only the requested node/package and explicitly authorized output artifacts"
+    },
+    "domain_operation": {
+      "inputs": [
+        "observed_owned_context",
+        "typed_operation_parameters"
+      ],
+      "outputs": [
+        "domain_receipt",
+        "completeness",
+        "goal_obligations"
+      ],
+      "effects": [
+        "declared_per_handler"
+      ],
+      "ownership": "Exact objects bound before mutation; preserve unrelated objects"
+    }
+  },
+  "capabilities": [
+    {
+      "id": "component.imports.OneCRequest",
+      "family": "imports",
+      "component_label": "1C Query",
+      "goal": "Configure \"1C Query\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 68
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/1c-db.md",
+          "sha256": "2cb0042b92c1ef550013214b5d58ffe950f9ef28089d6937d618df99663da4ff",
+          "document_title": "Import from 1C:Enterprise 8.x"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 12
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 23
+        },
+        {
+          "section": "Using parameters in queries",
+          "line": 32
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>1C_Query;TreeText",
+        "observed_label": "1C Query",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.imports.DataBase",
+      "family": "imports",
+      "component_label": "Database",
+      "goal": "Configure \"Database\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 70
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/database.md",
+          "sha256": "50568b2e23e27b2bb39756632adc75a0425a321dd60aad5adb3cd0e35e2e8234",
+          "document_title": "Import from Database"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 12
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 27
+        },
+        {
+          "section": "Using variables in queries",
+          "line": 78
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Database;TreeText",
+        "observed_label": "Database",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.imports.Text",
+      "family": "imports",
+      "component_label": "Text File",
+      "goal": "Configure \"Text File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 72
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/txt/README.md",
+          "sha256": "c64262c58056b84373b961f65b38ec2cac70f033fcb23cdc1c6214d52e3837a0",
+          "document_title": "Import from Text File"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 16
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Text_File;TreeText",
+        "observed_label": "Text File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.imports.Warehouse",
+      "family": "imports",
+      "component_label": "Deductor Warehouse",
+      "goal": "Configure \"Deductor Warehouse\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 74
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/warehouse.md",
+          "sha256": "63b034eb841eb1bf26f31b299f44dd9c499857c8a152815c0342d8df35d4de47",
+          "document_title": "Import from Deductor Warehouse"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 22
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Deductor_Warehouse;TreeText",
+        "observed_label": "Deductor Warehouse",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.imports.Excel",
+      "family": "imports",
+      "component_label": "Excel File",
+      "goal": "Configure \"Excel File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 76
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/excel/README.md",
+          "sha256": "fe3a3cb6dc57eef600fb88fdf59b51dff03cb59735308dba4529853d0797ac01",
+          "document_title": "Import from an Excel file"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 18
+        },
+        {
+          "section": "Multiple-import specifics",
+          "line": 127
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Excel_File;TreeText",
+        "observed_label": "Excel File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.imports.Kafka",
+      "family": "imports",
+      "component_label": "Kafka",
+      "goal": "Configure \"Kafka\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 78
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/kafka.md",
+          "sha256": "e3161f693a265dde8ddcf74396398d400b0520c02c3071cd0ea35d0e12354455",
+          "document_title": "Import from the Kafka message broker"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 21
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Kafka;TreeText",
+        "observed_label": "Kafka",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.imports.Lgd",
+      "family": "imports",
+      "component_label": "Megaladata Data File",
+      "goal": "Configure \"Megaladata Data File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 80
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/ldf.md",
+          "sha256": "95ed9afec1e8a77ba1b83d4f0ce5e2f55b4f52678abdeacf09041afe3c10bb74",
+          "document_title": "Import from an LGD file"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 20
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Megaladata_Data_файл;TreeText",
+        "observed_label": "Megaladata Data File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.imports.Xml",
+      "family": "imports",
+      "component_label": "XML File",
+      "goal": "Configure \"XML File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 82
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/import/xml.md",
+          "sha256": "70d81e83ec81ac935628b76b92954038047ab8d244ad6a080621cac9f7f053d5",
+          "document_title": "Import from an XML file"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 21
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>XML_File;TreeText",
+        "observed_label": "XML File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.GroupData",
+      "family": "transform",
+      "component_label": "Grouping",
+      "goal": "Configure \"Grouping\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 87
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/grouping.md",
+          "sha256": "858a671d866f4631996d77d2b18f5ec2ad582d0c1c407d42033161bc3acba386",
+          "document_title": "Grouping"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 44
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Grouping;TreeText",
+        "observed_label": "Grouping",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.DateTimeReform",
+      "family": "transform",
+      "component_label": "Date and Time",
+      "goal": "Configure \"Date and Time\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 89
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/trans-datatime/README.md",
+          "sha256": "21ca1fc84cc5699bedc0569529b55f83f9360f8da1c224d9734220cfeb8ce203",
+          "document_title": "Date and Time"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 32
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Date_and_Time;TreeText",
+        "observed_label": "Date and Time",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.EnrichData",
+      "family": "transform",
+      "component_label": "Enrich Data",
+      "goal": "Configure \"Data Enrichment\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 91
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/enrich-data.md",
+          "sha256": "3c7cab7e4bdbe9348ae4415c3503bb819326e28298b1512274915341bfaf1708",
+          "document_title": "Enrich Data"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 9
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 21
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Enrich_Data;TreeText",
+        "observed_label": "Enrich Data",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.Replace",
+      "family": "transform",
+      "component_label": "Replace",
+      "goal": "Configure \"Replacement\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 93
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/substitution/README.md",
+          "sha256": "c3cc5a20f367b6f1e93ad57f5c69f23ea2c35b2b78eae80ddc2ca4fd0caba5ea",
+          "document_title": "Replace"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "The exact source candidate is implemented; autonomous acceptance was not run",
+        "Direct development and save/reopen were checked; N11-R1 is fixed, target matrix 13/13 PASS, 16/16 negative; report docs/plans/megaladata-dock/11-fix-results-2026-09-13.md",
+        "Megaladata 7.4.2 limits other/value real to two digits; other Null flag=true disagrees with the Help example"
+      ],
+      "next_step": "Wait for the coordinator to assign autonomous Hermes Sol/low acceptance; status stays planned until accepted",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 23
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Replace;TreeText",
+        "observed_label": "Replace",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.Calculator",
+      "family": "transform",
+      "component_label": "Calculator",
+      "goal": "Configure \"Calculator\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 95
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/calc/README.md",
+          "sha256": "91b0724df472492ea08a3d1b37596ba7edffd523c99a3bafb684a1a33633bcb4",
+          "document_title": "Calculator"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 17
+        },
+        {
+          "section": "Calculator syntax",
+          "line": 101
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Calculator;TreeText",
+        "observed_label": "Calculator",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.CrossTable",
+      "family": "transform",
+      "component_label": "Cross Table",
+      "goal": "Configure \"Cross Table\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 97
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/cross-table.md",
+          "sha256": "ff1bf4769dbcb470ebc9b3fc748251afd8d47851e1cf6af23d41536db4d5dc47",
+          "document_title": "Cross Table"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 50
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Cross Table;TreeText",
+        "observed_label": "Cross Table",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.UnionData",
+      "family": "transform",
+      "component_label": "Union",
+      "goal": "Configure \"Union\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 99
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/union.md",
+          "sha256": "94beece5a219fa3a25f584fc9cab52b70ef89327ae2d58a839b452c12fef5c8f",
+          "document_title": "Union"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 57
+        },
+        {
+          "section": "Node Description",
+          "line": 91
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Union;TreeText",
+        "observed_label": "Union",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.ReformColumns",
+      "family": "transform",
+      "component_label": "Field Features",
+      "goal": "Configure \"Field Parameters\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "live_verified",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 101
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/fields-features.md",
+          "sha256": "468d52678beb28fd60b10a1600b5afa785cc5e55490b9bd2ba86629c8b097f9e",
+          "document_title": "Field Features"
+        }
+      ],
+      "supported_profiles": [
+        "megaladata-7.4.2-macos-chromium"
+      ],
+      "unit_evidence": [
+        {
+          "path": ".dock/field-parameters/client-suite-4.log",
+          "sha256": "c0bb6b330a192d59e766c42f2713c50886e9aa68501b1b3bc3090d483af90b8b",
+          "passed": 1235,
+          "skipped": 1
+        },
+        {
+          "path": ".dock/field-parameters/python-suite-6.log",
+          "sha256": "4a1c8f90eec2dd38d2efbd7e3ec9c01814772292a7c8c63b55e09fd82e835c0f",
+          "passed": 458
+        },
+        {
+          "path": ".dock/reform-review-20260911/client-tests.log",
+          "sha256": "d848f3e51d7fd2d42313fea865232987721e53f26871dcdf7db58f932f2033dd",
+          "passed": 1244,
+          "skipped": 1
+        },
+        {
+          "path": ".dock/reform-review-20260911/python-tests.log",
+          "sha256": "4539f16ecb7c9b05c835f8634fbe98e66029cc6bbdd3bba203428cbc47d2d220",
+          "passed": 461
+        }
+      ],
+      "live_evidence": [
+        {
+          "path": ".dock/field-parameters/hermes-runs/20260911-083239-ed5ccd06/reform-node-audit.json",
+          "sha256": "3d9441a6bbedf408271a20836cb4d44996dadcce612514991e9ce7766f6fd810",
+          "report_path": "docs/plans/megaladata-dock/05-completion-audit.md",
+          "runtime_revision": "df1071d2606bbfe355084010ef14c1d1d8aa1adf074d71f8f445c7864d1770db",
+          "manifest_uri": "viking://resources/megaladata-dock/catalogs/executor-preview/releases/2026.09.08-node-apply.1-candidate/manifest.json",
+          "manifest_sha256": "936ef73d933e85bfd8429b8b0f2b515c543ca415a2b22ba57e108232c54ddf44",
+          "native_skill_sha256": "2940ccd01337a3b9fc6d394e803ed50df295dfb41b4f4cf3c1484da961c44e53",
+          "target": "Megaladata 7.4.2 Linux / macOS Chromium",
+          "proof_scope": "scalar node.apply; new/existing; exact output; save/reopen/reexecute",
+          "checks_passed": 49
+        },
+        {
+          "path": ".dock/reform-review-20260911/hermes-runs/20260911-110726-82fa90aa/reform-node-audit.json",
+          "sha256": "35a9604caf6a7f5d778c9638d62c2a5560a08f00b1427569b6edf504d135f96f",
+          "report_path": "docs/megaladata-dock/field-parameters-review-2026-09-11.md",
+          "runtime_revision": "ab4702e56bbe6dac75a7df75f99919e5f6152324bf3d0633eae11cdf4bf03313",
+          "manifest_uri": "viking://resources/megaladata-dock/catalogs/executor-preview/releases/2026.09.08-node-apply.1-candidate/manifest.json",
+          "manifest_sha256": "936ef73d933e85bfd8429b8b0f2b515c543ca415a2b22ba57e108232c54ddf44",
+          "native_skill_sha256": "2940ccd01337a3b9fc6d394e803ed50df295dfb41b4f4cf3c1484da961c44e53",
+          "target": "Megaladata 7.4.2 Linux / macOS Chromium",
+          "proof_scope": "scalar node.apply; new/existing; exact output; save/reopen/reexecute",
+          "checks_passed": 49
+        },
+        {
+          "path": ".dock/client-update-field-parameters-20260911/live-1789115736748/installed-independent-audit.json",
+          "sha256": "626b24122b403e242556614dde2ab158d397b4dc9b45db62bd0ed7cd105999fd",
+          "report_path": "docs/megaladata-dock/client-update-field-parameters-2026-09-11.md",
+          "runtime_revision": "1161c1c8f8d82bd3742d4d49bf84ab69f98bf348dcdcb487f4fcb4257881ddfa",
+          "target": "Megaladata 7.4.2 Linux / macOS Chromium",
+          "proof_scope": "installed client; existing saved reform configuration; fresh 6x4 output; no new Hermes run or save after rerun",
+          "checks_passed": 11
+        }
+      ],
+      "known_gaps": [
+        "A local macOS client is installed; the public release and a new autonomous acceptance of the combined kit were not run",
+        "Five scalar types; at most 128 changes and 1000 fields in a full inventory",
+        "The exact sample is limited to 10 rows; Megaladata 7.5 and all of V4/V5 are not accepted",
+        "Live cancellation was checked before browser work, not during server computation"
+      ],
+      "next_step": "Continue subplans 06/09/10; publish as a separate accepted V5 delivery",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 32
+        },
+        {
+          "section": "Column exclusion",
+          "line": 44
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Field_Features;TreeText",
+        "observed_label": "Field Features",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.UngroupData",
+      "family": "transform",
+      "component_label": "Ungroup",
+      "goal": "Configure \"Ungroup\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 103
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/ungrouping.md",
+          "sha256": "2bfde1790730c5af18814ffc48115c86fa0658380c3577bb1b06278919cc3534",
+          "document_title": "Ungroup"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 59
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 91
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Ungroup;TreeText",
+        "observed_label": "Ungroup",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.ColumnFlipping",
+      "family": "transform",
+      "component_label": "Unpivoting",
+      "goal": "Configure \"Column Collapse\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 105
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/collapse-columns.md",
+          "sha256": "2523ce039fb565104814f27c36c4c7a390d6eeb2e31b268c2075eb80c22698c1",
+          "document_title": "Column collapse"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 34
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 44
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Unpivoting;TreeText",
+        "observed_label": "Unpivoting",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.SlidingWindow",
+      "family": "transform",
+      "component_label": "Lag",
+      "goal": "Configure \"Sliding Window\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 107
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/lag.md",
+          "sha256": "2de7379271bad3c47509bd8385479520e9b7806bf12de21e7769e53977103317",
+          "document_title": "Lag"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 48
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 58
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Lag;TreeText",
+        "observed_label": "Lag",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.JoinData",
+      "family": "transform",
+      "component_label": "Join",
+      "goal": "Configure \"Merge\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 109
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/join/README.md",
+          "sha256": "d9a1ddc1a1b22fc2e60975ae178e0b1bd440fdcc27871519b1da96107098ff37",
+          "document_title": "Join"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 27
+        }
+      ],
+      "documented_modes": [
+        {
+          "name": "Full join",
+          "path": "data/processors/transformation/join/cross.md",
+          "sha256": "a712bf771671297cec1aa453f6891458adc9d135316e1377568003613d4ca87e"
+        },
+        {
+          "name": "Difference",
+          "path": "data/processors/transformation/join/difference.md",
+          "sha256": "c6fe6b91c15fc2663c12ed09d6c87fd00d31701f9c4dcedbff4fb99659ef0fe0"
+        },
+        {
+          "name": "Inner join",
+          "path": "data/processors/transformation/join/inner.md",
+          "sha256": "4d9fd4037e7761e37f54e949f035d505c8097987d0de2176d4a22611923458a5"
+        },
+        {
+          "name": "Left join",
+          "path": "data/processors/transformation/join/left.md",
+          "sha256": "23e2cfd708cbbc3cb6f823cc6cf9db38575dc22a88a020735f568e25490738d5"
+        },
+        {
+          "name": "Right join",
+          "path": "data/processors/transformation/join/right.md",
+          "sha256": "221aa7ee249ccb24a915abd98d6198d118f3b68e6258465db080b1ee8dc754db"
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Join;TreeText",
+        "observed_label": "Join",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.ColUnionData",
+      "family": "transform",
+      "component_label": "Column Union",
+      "goal": "Configure \"Join\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 111
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/column-union.md",
+          "sha256": "306fb9478f88cae989c68a84c8ade020429b5418ce6a3fd625fe44fd790eb8ec",
+          "document_title": "Column Union"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 25
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Column Union;TreeText",
+        "observed_label": "Column Union",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.Sorting",
+      "family": "transform",
+      "component_label": "Sorting",
+      "goal": "Configure \"Sorting\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 113
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/sorting.md",
+          "sha256": "65cb89bff7e390d5977199a9148cbf878ff33f49cf533e15cfdaa4e272607f05",
+          "document_title": "Sorting"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 24
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Сортировка;TreeText",
+        "observed_label": "Sorting",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.transform.FilterData",
+      "family": "transform",
+      "component_label": "Row Filter",
+      "goal": "Configure \"Row Filter\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "live_verified",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 115
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/transformation/row-filter/README.md",
+          "sha256": "54fa63cff322550cc97d90db11ffea37e5226c9cb52d3de1ca55665b0898f83f",
+          "document_title": "Row Filter"
+        }
+      ],
+      "supported_profiles": [
+        "megaladata-7.4.2-macos-chromium"
+      ],
+      "unit_evidence": [
+        {
+          "path": ".dock/row-filter-review/python-tests.log",
+          "sha256": "cf3568b1bb25798e3201cc3fab8e732cadd20fb30d63383f6e384f5be684c165",
+          "passed": 475
+        },
+        {
+          "path": ".dock/row-filter-review/client-tests-final.log",
+          "sha256": "a81d89489b28e83ab5395a004bad3d9b4a7bf4e69dbf676f6804f9689bf51f32",
+          "passed": 1287,
+          "skipped": 1
+        },
+        {
+          "path": ".dock/row-filter/all-client-tests-final-candidate.log",
+          "sha256": "ae335f64c60ebef3954528a791566d79f55629fc84118c9896f6aa025f2082a9",
+          "passed": 1279,
+          "skipped": 1
+        },
+        {
+          "path": ".dock/row-filter/python-tests-final-source-name.log",
+          "sha256": "7313792bc95b5f664ba0a53e50a345015940ec9b9154e6ce5f40e220eb26db28",
+          "passed": 475
+        }
+      ],
+      "live_evidence": [
+        {
+          "path": ".dock/client-update-row-filter-20260911/live-1789141466433/installed-independent-audit.json",
+          "sha256": "24ecc7fb547bd1864fca2811146a164ceb6f7b9d719bfc0dd2e122c85b30a278",
+          "report_path": "docs/megaladata-dock/client-update-row-filter-2026-09-11.md",
+          "runtime_revision": "f14d6452ef74c43fd75730f87bae2db8bb3d4e7faca2aeb5604a47af96d0f61e",
+          "target": "Megaladata 7.4.2 Linux / installed macOS Chromium client",
+          "proof_scope": "installed bundle; saved diagnostic copy reopened; existing filter rerun without reconfiguration; exact 5+5 rows and 50 values; preserved mappings and graph; not a separate Hermes acceptance",
+          "checks_passed": 11
+        },
+        {
+          "path": ".dock/row-filter-review/hermes-runs/20260911-181616-1338ee3f/filter-node-audit.json",
+          "sha256": "cd863cad675f06f8e2b597c93bbd13defe6b4e7dd912178f9ec97294ca5d9062",
+          "report_path": "docs/megaladata-dock/row-filter-review-live-2026-09-11.md",
+          "runtime_revision": "fd2999ce9f87a878882a20962eda56b69941d15dcedd8d7a70852579c5819e53",
+          "manifest_uri": "viking://resources/megaladata-dock/catalogs/executor-preview/releases/2026.09.08-node-apply.1-candidate/manifest.json",
+          "manifest_sha256": "936ef73d933e85bfd8429b8b0f2b515c543ca415a2b22ba57e108232c54ddf44",
+          "native_skill_sha256": "714104445d37265943ab5e7d55a7c505c00fe38a62bc38a0c3c8ea24f7764b39",
+          "target": "Megaladata 7.4.2 Linux / macOS Chromium",
+          "proof_scope": "post-review conditions node.apply; both exact outputs; save/reopen/reexecute without reassignment; 49 frozen checks and 10 negative substitutions",
+          "checks_passed": 49
+        },
+        {
+          "path": ".dock/row-filter/hermes-runs/20260911-154023-843300b0/filter-node-audit.json",
+          "sha256": "8fad61fa1cd80daf4d5e923efe6ee1548f496658cb11e20cfde40a8aee07d2d8",
+          "report_path": "docs/plans/megaladata-dock/06-completion-audit.md",
+          "runtime_revision": "5c945f3e189e6588acf036ca7139e35c62bf055b30b7ce78bd1fa7b2c548756d",
+          "manifest_uri": "viking://resources/megaladata-dock/catalogs/executor-preview/releases/2026.09.08-node-apply.1-candidate/manifest.json",
+          "manifest_sha256": "936ef73d933e85bfd8429b8b0f2b515c543ca415a2b22ba57e108232c54ddf44",
+          "native_skill_sha256": "714104445d37265943ab5e7d55a7c505c00fe38a62bc38a0c3c8ea24f7764b39",
+          "target": "Megaladata 7.4.2 Linux / macOS Chromium",
+          "proof_scope": "conditions node.apply; new/existing; both exact outputs; save/reopen/reexecute without reassignment",
+          "checks_passed": 49
+        },
+        {
+          "path": ".dock/row-filter/complete-matrix-audit.json",
+          "sha256": "9a0783b212927664b08cb18cef52521c80a91034a934ab688d76b7ca87c74932",
+          "report_path": "docs/plans/megaladata-dock/06-completion-audit.md",
+          "target": "Megaladata 7.4.2 Linux / macOS Chromium",
+          "proof_scope": "90 operator/type cases; independent raw configuration and both fixture partitions; source revisions recorded per case",
+          "checks_passed": 90
+        }
+      ],
+      "known_gaps": [
+        "The source runtime was checked; the installed client and the public release were not updated",
+        "Scalar conditions only; control variables and variant are not supported",
+        "Up to 64 groups, 128 condition/OR rows, 128 list items; an exact sample of up to 10 rows",
+        "Field names are limited by the identifier contract of analytic handlers; local dates have no timezone",
+        "The shared safe refusals for invisible graph ports and an unscrolled single import are kept in the report; Megaladata 7.5 and all of V4/V5 are not accepted",
+        "A full public preflight of a new node at a 1000-field preview is limited by the shared UI_SCAN_LIMIT; wide filter checks were done by the diagnostic UI driver, not by full public node.apply acceptance"
+      ],
+      "next_step": "Continue subplans 09/10; build on the VPS, install, and publish as a separate accepted delivery",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 34
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Row_Filter;TreeText",
+        "observed_label": "Row Filter",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.control.ExecNode",
+      "family": "control",
+      "component_label": "Node_Execution",
+      "goal": "Configure \"Node Execution\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 121
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/control/execute-node.md",
+          "sha256": "3a47a1c3f1be2e56c750d4f1c46b60d4c0c4815023e14bd441615a82f5f9e6c8",
+          "document_title": "Node Execution"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 21
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 25
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Node_Execution;TreeText",
+        "observed_label": "Node Execution",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.control.SuperNode",
+      "family": "control",
+      "component_label": "Supernode",
+      "goal": "Configure \"Supernode\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 123
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/control/supernode.md",
+          "sha256": "773db1414185f715ac84f01bf59ce9cdaa4352b7226728e477de030d82785493",
+          "document_title": "Supernode"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 12
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 29
+        },
+        {
+          "section": "Supernode construction area",
+          "line": 51
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Supernode;TreeText",
+        "observed_label": "Supernode",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.control.ReferenceNode",
+      "family": "control",
+      "component_label": "Reference Node",
+      "goal": "Configure \"Reference Node\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 125
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/control/reference-node.md",
+          "sha256": "c52aaedb4f66f7332248e49be087afd18cf203e68b9fe3d9e3dd46ff85a99d90",
+          "document_title": "Reference Node"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 14
+        },
+        {
+          "section": "Node visibility",
+          "line": 20
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Reference Node;TreeText",
+        "observed_label": "Reference Node",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.control.Condition",
+      "family": "control",
+      "component_label": "Condition",
+      "goal": "Configure \"Condition\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 127
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/control/condition.md",
+          "sha256": "2531ff2db571a30b782dda972677deb94de4a3ff8dfdad7d4a37362149174818",
+          "document_title": "Condition"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 15
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 29
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Условие;TreeText",
+        "observed_label": "Condition",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.control.Loop",
+      "family": "control",
+      "component_label": "Loop",
+      "goal": "Configure \"Loop\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 129
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/control/loop.md",
+          "sha256": "8c364257942868c2d0b89dedd089010816da3f2b4e90e8df7d7dab06bd927bf1",
+          "document_title": "Loop"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 25
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 29
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Loop;TreeText",
+        "observed_label": "Loop",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.research.AutoCorrelation",
+      "family": "research",
+      "component_label": "Autocorrelation",
+      "goal": "Configure \"Autocorrelation\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 135
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/scrutiny/autocorrelation.md",
+          "sha256": "0438f31fe2b44b74f1470025e4fc9f9a01931cf31579f6b4873f9351bd84049f",
+          "document_title": "Autocorrelation"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 50
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 67
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Autocorrelation;TreeText",
+        "observed_label": "Autocorrelation",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.research.Duplicates",
+      "family": "research",
+      "component_label": "Duplicates and Inconsistencies",
+      "goal": "Configure \"Duplicates and Contradictions\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 137
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/scrutiny/duplicates.md",
+          "sha256": "790dff5331881b19516f6942d87c4df9bd7201049fb389386a7058bae77a9a68",
+          "document_title": "Duplicates and Inconsistencies"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 46
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Duplicates_and_Inconsistencies;TreeText",
+        "observed_label": "Duplicates and Inconsistencies",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.research.Quality",
+      "family": "research",
+      "component_label": "Data Quality",
+      "goal": "Configure \"Data Quality\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 139
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "The reviewed Help contains a Data Quality visualizer, not the processor of the same name; do not treat them as the same"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Data_Quality;TreeText",
+        "observed_label": "Data Quality",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.research.CorrAnalysis",
+      "family": "research",
+      "component_label": "Correlation Analysis",
+      "goal": "Configure \"Correlation Analysis\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 141
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/scrutiny/correlation-analysis.md",
+          "sha256": "82856b922ec8f2b520b282cea4788823992662ee2bf441bb264bd054837c0382",
+          "document_title": "Correlation Analysis"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 44
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 65
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Correlation_Analysis;TreeText",
+        "observed_label": "Correlation Analysis",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.research.FactorAnalysis",
+      "family": "research",
+      "component_label": "Factor Analysis",
+      "goal": "Configure \"Factor Analysis\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 143
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/scrutiny/factor-analysis.md",
+          "sha256": "5f7095d7ab04314efa2c7762a479ffeea5dd2ec6b001ba1240ce26867e5de7c8",
+          "document_title": "Factor Analysis"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 54
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 65
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Factor_Analysis;TreeText",
+        "observed_label": "Factor Analysis",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.preprocessing.DataRecovery",
+      "family": "preprocessing",
+      "component_label": "Imputation",
+      "goal": "Configure \"Missing Values\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 148
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/preprocessing/imputation.md",
+          "sha256": "1fbfa56ced9cd7abcdad27f73eb2c321667d6faabc3c727a7e0f452ff231b507",
+          "document_title": "Imputation"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 11
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 21
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Imputation;TreeText",
+        "observed_label": "Imputation",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.preprocessing.Binning",
+      "family": "preprocessing",
+      "component_label": "Binning",
+      "goal": "Configure \"Quantization\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 150
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/preprocessing/binning.md",
+          "sha256": "7581587222f6b1429a98354dabe8b85b75608d89736fe9bb66f5a64aa732b586",
+          "document_title": "Binning"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 24
+        },
+        {
+          "section": "Node execution specifics",
+          "line": 92
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Binning;TreeText",
+        "observed_label": "Binning",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.preprocessing.CoarseClasses",
+      "family": "preprocessing",
+      "component_label": "Coarse Classes",
+      "goal": "Configure \"Coarse Classes\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 152
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/preprocessing/coarse-classes.md",
+          "sha256": "4af8f37bed4b49b05b8da52d024fb1392dba9819e26fa435f301b30d64d33d55",
+          "document_title": "Coarse Classes"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 76
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Coarse_Classes;TreeText",
+        "observed_label": "Coarse Classes",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.preprocessing.DataPartition",
+      "family": "preprocessing",
+      "component_label": "Partitioning",
+      "goal": "Configure \"Split into Sets\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 154
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/preprocessing/partitioning.md",
+          "sha256": "007ed6aa2757a89a494b05bb7723bbd5713365bb96d007b097aa242c06d83574",
+          "document_title": "Partitioning"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 22
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Partitioning;TreeText",
+        "observed_label": "Partitioning",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.preprocessing.Elimoutlier",
+      "family": "preprocessing",
+      "component_label": "Eliminate Outliers",
+      "goal": "Configure \"Outlier Editing\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 156
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/preprocessing/eliminate-outliers.md",
+          "sha256": "3db92e7ed63079ab6912203cb22751b5e54d89300759cf2b96152ff09cd043a3",
+          "document_title": "Eliminate Outliers"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 22
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Eliminate_Outliers;TreeText",
+        "observed_label": "Eliminate Outliers",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.preprocessing.Smoothing",
+      "family": "preprocessing",
+      "component_label": "Smoothing",
+      "goal": "Configure \"Smoothing\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 158
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/preprocessing/smoothing.md",
+          "sha256": "6274ba8bf6e63c341c09118cded039145e8f2008b9e03e02153acce065c944ba",
+          "document_title": "Smoothing"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 16
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 26
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Smoothing;TreeText",
+        "observed_label": "Smoothing",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.preprocessing.Sampling",
+      "family": "preprocessing",
+      "component_label": "Sampling",
+      "goal": "Configure \"Sampling\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 160
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/preprocessing/sampling.md",
+          "sha256": "6a2638eb30f19042d7cf788c13bc8f51a7632be33964a6446cc50ec29e77639c",
+          "document_title": "Sampling"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 12
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 22
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Sampling;TreeText",
+        "observed_label": "Sampling",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.AssnRules",
+      "family": "dataMining",
+      "component_label": "Association Rules",
+      "goal": "Configure \"Association Rules\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 165
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/association-rules.md",
+          "sha256": "40733acc21e6df90ddbb73ffe3890c61a68da29575d337e223ea6a418347340b",
+          "document_title": "Association Rules"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 56
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Association_Rules;TreeText",
+        "observed_label": "Association Rules",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.Clustering",
+      "family": "dataMining",
+      "component_label": "Clustering",
+      "goal": "Configure \"Clustering\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 167
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/clustering.md",
+          "sha256": "04dc274841e2f6e353087578bddc6a9a40e396c604450f50df64f41929072bd1",
+          "document_title": "Clustering"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 18
+        },
+        {
+          "section": "Node configuration wizard",
+          "line": 49
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Clustering;TreeText",
+        "observed_label": "Clustering",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.Clope",
+      "family": "dataMining",
+      "component_label": "Transaction Clustering",
+      "goal": "Configure \"Transaction Clustering\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 169
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/transaction-clustering.md",
+          "sha256": "b9aa10d04af8e156b63e44a5903f406618e75b8657587823fe089ffd2a5561a5",
+          "document_title": "Transaction Clustering"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 14
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 47
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Transaction_Clustering;TreeText",
+        "observed_label": "Transaction Clustering",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.LinRegression",
+      "family": "dataMining",
+      "component_label": "Linear Regression",
+      "goal": "Configure \"Linear Regression\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 171
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/linear-regression/README.md",
+          "sha256": "b9869720ca9b93398de9c0019bacb4f9f6170cafec301fb715fc19194b7c84a8",
+          "document_title": "Linear Regression"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 18
+        },
+        {
+          "section": "Node configuration wizard",
+          "line": 30
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Linear_Regression;TreeText",
+        "observed_label": "Linear Regression",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.LogRegression",
+      "family": "dataMining",
+      "component_label": "Logistic Regression",
+      "goal": "Configure \"Logistic Regression\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 173
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/logistic-regression/README.md",
+          "sha256": "685c48bb9d3959a940f7323bdc862e6e1b2d5442a04c08c92a308d85adad5fc3",
+          "document_title": "Logistic Regression"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Node configuration wizard",
+          "line": 28
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Logistic_Regression;TreeText",
+        "observed_label": "Logistic Regression",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.NeuralnetClass",
+      "family": "dataMining",
+      "component_label": "Neural Net (classification)",
+      "goal": "Configure \"Neural Network (classification)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 175
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/neural-network-classification.md",
+          "sha256": "e5ef536ea5050642d47af2b37da6c3fe93502ac397909a69300ec283ea54a681",
+          "document_title": "Neural Net (classification)"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 23
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 38
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Neural_Net_(classification);TreeText",
+        "observed_label": "Neural Net (classification)",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.NeuralnetReg",
+      "family": "dataMining",
+      "component_label": "Neural Net (regression)",
+      "goal": "Configure \"Neural Network (regression)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 177
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/neural-network-regression.md",
+          "sha256": "64bf8f331efe6b5d8826d605837ae1714f45c90fbc5a0ff455590067362bdde7",
+          "document_title": "Neural Net (regression)"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 17
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 32
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Neural_Net_(regression);TreeText",
+        "observed_label": "Neural Net (regression)",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.Sonn",
+      "family": "dataMining",
+      "component_label": "Self-Organizing Network",
+      "goal": "Configure \"Self-Organizing Network\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 179
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/self-organizing-network.md",
+          "sha256": "41d8f441c1046c355aead395ee3cd0f97da0b3b5272ae75dd1d2083d6f01ead8",
+          "document_title": "Self-organizing networks"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 16
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 44
+        }
+      ],
+      "documented_modes": [
+        "Kohonen networks",
+        "Neural gas",
+        "Training until output sets are produced"
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Self-Organizing_Network;TreeText",
+        "observed_label": "Self-Organizing Network",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.Arimax",
+      "family": "dataMining",
+      "component_label": "ARIMAX",
+      "goal": "Configure \"ARIMAX\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 181
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/arimax.md",
+          "sha256": "2a2667e09946fed450bbb092c4e4311301571a1b70873d02a4825e4a8022956f",
+          "document_title": "ARIMAX"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 14
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 55
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>ARIMAX;TreeText",
+        "observed_label": "ARIMAX",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.dataMining.EmClust",
+      "family": "dataMining",
+      "component_label": "EM Clustering",
+      "goal": "Configure \"EM Clustering\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 183
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/datamining/em-clustering.md",
+          "sha256": "d581901218f66742db73980f20bc5786d4f05297f6e1b646106953c69c886d54",
+          "document_title": "EM Clustering"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 12
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 44
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>EM_Clustering;TreeText",
+        "observed_label": "EM Clustering",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.programming.JavaScript",
+      "family": "programming",
+      "component_label": "JavaScript",
+      "goal": "Configure \"JavaScript\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 188
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/programming/java-script/README.md",
+          "sha256": "64971484e027d97ced0db920bcd087def2f2aae319d5963b88047585f51ca692",
+          "document_title": "JavaScript"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 7
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 23
+        },
+        {
+          "section": "Access from JavaScript code to port data and other built-in objects",
+          "line": 57
+        },
+        {
+          "section": "Fetch API",
+          "line": 70
+        },
+        {
+          "section": "File Storage API",
+          "line": 74
+        },
+        {
+          "section": "Error handling",
+          "line": 78
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Scripting>JavaScript;TreeText",
+        "observed_label": "JavaScript",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.programming.Python",
+      "family": "programming",
+      "component_label": "Python",
+      "goal": "Configure \"Python\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 190
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/programming/python/README.md",
+          "sha256": "de37bff0cbafd56af973d143f57c30dad7c8f5ceaa63e5feee0e38cec2d1b750",
+          "document_title": "Python"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 7
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 27
+        },
+        {
+          "section": "Access from Python code to port data and other built-in objects",
+          "line": 80
+        },
+        {
+          "section": "Error handling",
+          "line": 91
+        },
+        {
+          "section": "Global functions",
+          "line": 95
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Scripting>Python;TreeText",
+        "observed_label": "Python",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.variables.Replace",
+      "family": "variables",
+      "component_label": "Replace (variables)",
+      "goal": "Configure \"Replacement (variables)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 195
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/variables/variables-replace.md",
+          "sha256": "bad7f442a04e6ab2272b6e2cc1ef14e86cf954531e47169ec14a851378834101",
+          "document_title": "Replace (variables)"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 14
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 24
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Replace_(variables);TreeText",
+        "observed_label": "Replace (variables)",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.variables.Calculator",
+      "family": "variables",
+      "component_label": "Calculator (variables)",
+      "goal": "Configure \"Calculator (variables)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 197
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/variables/variables-calc.md",
+          "sha256": "43e71a7c267e9e7949cf6b06bbfa56e36077d33cb120b86e2ed91d37cc836a6d",
+          "document_title": "Calculator (variables)"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 20
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Calculator_(variables);TreeText",
+        "observed_label": "Calculator (variables)",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.variables.VarToData",
+      "family": "variables",
+      "component_label": "Variables to Table",
+      "goal": "Configure \"Variables to Table\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 199
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/variables/variables-to-table.md",
+          "sha256": "8030c17dee74381ec075d765477c182443b1d84ee224b6b957cbf75b8d2a45aa",
+          "document_title": "Variables to Table"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 18
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Variables_to_Table;TreeText",
+        "observed_label": "Variables to Table",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.variables.ColunionDataVar",
+      "family": "variables",
+      "component_label": "Variable Union",
+      "goal": "Configure \"Join (variables)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 201
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/variables/variables-union.md",
+          "sha256": "8545ad5da90b80269f9077047d9a31bad1db688f914277c2fe4811c222f7fe26",
+          "document_title": "Variable Union"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Variable_Union;TreeText",
+        "observed_label": "Variable Union",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.variables.DataToVar",
+      "family": "variables",
+      "component_label": "Table to Variables",
+      "goal": "Configure \"Table to Variables\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 203
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/variables/variables-from-table.md",
+          "sha256": "5cdae307955f87f84867a547512014e063093223822cdd2778eb6ce7b827f0ed",
+          "document_title": "Table to Variables"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 18
+        },
+        {
+          "section": "Output set contents",
+          "line": 66
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Table_to_Variables;TreeText",
+        "observed_label": "Table to Variables",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.trees.JSONToTree",
+      "family": "trees",
+      "component_label": "JSON to Tree",
+      "goal": "Configure \"JSON to Tree\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 208
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/data-trees/json-to-tree.md",
+          "sha256": "1751f408bc9cfee16fadef364678ea80c1d297501273c52e83d7fd807f5520d3",
+          "document_title": "JSON to Tree"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 17
+        },
+        {
+          "section": "Component behavior specifics",
+          "line": 112
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>JSON_to_Tree;TreeText",
+        "observed_label": "JSON to Tree",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.trees.TreeToData",
+      "family": "trees",
+      "component_label": "Tree to Table",
+      "goal": "Configure \"Tree to Table\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 210
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/data-trees/tree-to-table.md",
+          "sha256": "a8993a45e93042aecec0c8b06dc9f1d185d591a2d604662de1f5f20cd00a49b7",
+          "document_title": "Tree to Table"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 17
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_to_Table;TreeText",
+        "observed_label": "Tree to Table",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.trees.CalculatorTree",
+      "family": "trees",
+      "component_label": "Calculator (Tree)",
+      "goal": "Configure \"Calculator (tree)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 212
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/data-trees/calculator-tree/README.md",
+          "sha256": "c890ba2559f97797965fa840b029a9b8fb2e348680e8af581bfba16cc5c09c4a",
+          "document_title": "Calculator (Tree)"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 19
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Calculator_(Tree);TreeText",
+        "observed_label": "Calculator (Tree)",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.trees.UnionTree",
+      "family": "trees",
+      "component_label": "Tree Union",
+      "goal": "Configure \"Union (tree)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 214
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/data-trees/union-tree.md",
+          "sha256": "5be72d6068e2cc8c267124bb61271ba67a08a34ca0a2714290bc28c40cf7d73f",
+          "document_title": "Tree Union"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 24
+        },
+        {
+          "section": "Description of the component operating modes",
+          "line": 34
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_Union;TreeText",
+        "observed_label": "Tree Union",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.trees.JoindataTree",
+      "family": "trees",
+      "component_label": "Tree Join",
+      "goal": "Configure \"Merge (tree)\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 216
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/data-trees/join-tree.md",
+          "sha256": "f87b7df810fb97d2bf5b7e1ce35338cfaa1c202d27cd157a8475a7027cf68b94",
+          "document_title": "Tree Join"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 15
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 26
+        },
+        {
+          "section": "Merge specifics for Container and Array",
+          "line": 53
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_Join;TreeText",
+        "observed_label": "Tree Join",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.trees.DataToTree",
+      "family": "trees",
+      "component_label": "Table to Tree",
+      "goal": "Configure \"Table to Tree\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 218
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/data-trees/table-to-tree.md",
+          "sha256": "c230365b2c41a89f5d210599ae2a3f43eef59bceedd8172ea0dd06b351952a24",
+          "document_title": "Table to Tree"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 18
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Table_to_Tree;TreeText",
+        "observed_label": "Table to Tree",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.trees.TreeToJSON",
+      "family": "trees",
+      "component_label": "Tree to JSON",
+      "goal": "Configure \"Tree to JSON\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 220
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/data-trees/tree-to-json.md",
+          "sha256": "fe8d3325324f215f21a118490e4c7fec88bdeb66c909bf1e83d346f48c0ba10f",
+          "document_title": "Tree to JSON"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 17
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_to_JSON;TreeText",
+        "observed_label": "Tree to JSON",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.integration.ExecCmd",
+      "family": "integration",
+      "component_label": "Program Execution",
+      "goal": "Configure \"Program Execution\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 225
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/integration/exec-program.md",
+          "sha256": "527f2f33da677bfbb915ae3032ef2c0c83ef6f89390dd4ab601e2259ee4550c8",
+          "document_title": "Program Execution"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 14
+        },
+        {
+          "section": "Node configuration wizard",
+          "line": 30
+        },
+        {
+          "section": "Writing commands",
+          "line": 40
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>Program_Execution;TreeText",
+        "observed_label": "Program Execution",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.integration.ExtractXml",
+      "family": "integration",
+      "component_label": "XML Parsing",
+      "goal": "Configure \"XML Parse\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 227
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/integration/extracting-xml.md",
+          "sha256": "9c3147872c7c27038b1109d40bd29f3070085b36b9739aa407cbf23c2fc92488",
+          "document_title": "XML Parsing"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Description",
+          "line": 6
+        },
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 31
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>XML_Parsing;TreeText",
+        "observed_label": "XML Parsing",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.integration.DataToXml",
+      "family": "integration",
+      "component_label": "XML Generation",
+      "goal": "Configure \"XML Build\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 229
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/integration/xml-generation.md",
+          "sha256": "612cc0c6e88fd9755b5cb12b497cdce91d21aa48e9dd6f25136d8ec61173e471",
+          "document_title": "XML Generation"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 22
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>XML_Generation;TreeText",
+        "observed_label": "XML Generation",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.integration.RestRequest",
+      "family": "integration",
+      "component_label": "REST Request",
+      "goal": "Configure \"REST Request\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 231
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/integration/rest-request.md",
+          "sha256": "e8f667a51393b546642e14ff0680980c03dad372ecead87241cc9075f25d0120",
+          "document_title": "REST Request"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 19
+        },
+        {
+          "section": "Wizard",
+          "line": 32
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>REST Request;TreeText",
+        "observed_label": "REST Request",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.integration.SoapRequest",
+      "family": "integration",
+      "component_label": "SOAP Request",
+      "goal": "Configure \"SOAP Request\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 233
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/integration/soap-request.md",
+          "sha256": "45f37cf5b56879e3f5d5c916ef6ca55fbc0fb67d090e0e84443fa51218f6f36b",
+          "document_title": "SOAP Request"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 12
+        },
+        {
+          "section": "Wizard",
+          "line": 26
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>SOAP Request;TreeText",
+        "observed_label": "SOAP Request",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.integration.SqlScript",
+      "family": "integration",
+      "component_label": "SQL Script",
+      "goal": "Configure \"SQL Script\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 235
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/processors/integration/sql-script.md",
+          "sha256": "3f5e6a9eedd5a8ee82b879a4a740f9467e8e46521247c4948e0875a0ac2a4314",
+          "document_title": "SQL Script"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 25
+        },
+        {
+          "section": "Transaction and SQL-script specifics",
+          "line": 56
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>SQL Script;TreeText",
+        "observed_label": "SQL Script",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.exports.DataBase",
+      "family": "exports",
+      "component_label": "Database",
+      "goal": "Configure \"Database\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 240
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/database.md",
+          "sha256": "6fca2d4f65214eefb730964de2b667c4557feb324252a9a2153bf8903e2dc108",
+          "document_title": "Export to Database"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 22
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Database;TreeText",
+        "observed_label": "Database",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.exports.Text",
+      "family": "exports",
+      "component_label": "Text File",
+      "goal": "Configure \"Text File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 242
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/txt-csv.md",
+          "sha256": "649520f7b800d6f12e2226bdaf456aa715bb82878c78b89c6fe8d56808d81067",
+          "document_title": "Export to Text File"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 13
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Text_File;TreeText",
+        "observed_label": "Text File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.exports.Warehouse",
+      "family": "exports",
+      "component_label": "Deductor Warehouse",
+      "goal": "Configure \"Deductor Warehouse\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 244
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/warehouse.md",
+          "sha256": "9fef03c1ffdf3df89c5342f36ec9bc5da81b6b5778e36bcdb8e840748efbbfdd",
+          "document_title": "Export to Deductor Warehouse"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Configuration wizard",
+          "line": 15
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Deductor_Warehouse;TreeText",
+        "observed_label": "Deductor Warehouse",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.exports.Excel",
+      "family": "exports",
+      "component_label": "Excel File",
+      "goal": "Configure \"Excel File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 246
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/excel.md",
+          "sha256": "f2e29be6a6006e963cb4da63659b870fc93065d8c78507f7ab94b90dcdd14ebf",
+          "document_title": "Export to an Excel file"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 11
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 18
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Excel_File;TreeText",
+        "observed_label": "Excel File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.exports.Kafka",
+      "family": "exports",
+      "component_label": "Kafka",
+      "goal": "Configure \"Kafka\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 248
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/kafka.md",
+          "sha256": "a022ca7308df7f79f81811a2dec32845697ccaec43fbf85ec16f2a8d5d366532",
+          "document_title": "Export to Kafka"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 6
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 13
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Kafka;TreeText",
+        "observed_label": "Kafka",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.exports.Lgd",
+      "family": "exports",
+      "component_label": "Megaladata Data File",
+      "goal": "Configure \"Megaladata Data File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 250
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/ldf.md",
+          "sha256": "161a0cd126553a1ebf392b9993819ce8599c234d73feef99375c632fa8ea765b",
+          "document_title": "Export to an LGD file"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 12
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 19
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Megaladata_Data_файл;TreeText",
+        "observed_label": "Megaladata Data File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "component.exports.Tableau",
+      "family": "exports",
+      "component_label": "Tableau file",
+      "goal": "Configure \"Tableau File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 252
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/tableau.md",
+          "sha256": "9085d9a1601c7d6af9958894540a373726ed26becb0be40fb2c0ca64ba7dd7f6",
+          "document_title": "Export to Tableau file"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "Presence in E2E labels does not prove availability in the current license or UI",
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Check availability in the live UI; source review of the wizard and a separate chain with data",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 8
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 16
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "proof_scope": "not_observed; absence_and_license_not_established"
+      }
+    },
+    {
+      "id": "component.exports.Xml",
+      "family": "exports",
+      "component_label": "XML File",
+      "goal": "Configure \"XML File\", execute, verify the data, and reproduce after reopening the package",
+      "modes": [
+        "configure",
+        "execute",
+        "inspect_result",
+        "save_reopen"
+      ],
+      "contract": "component_pipeline",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "e2e-labels",
+          "line": 254
+        },
+        {
+          "source": "megaladata-help",
+          "path": "data/integration/export/xml.md",
+          "sha256": "c9e69c2793c037dc5e0e092cfdd23649c043c2f4ad37dc0b8149cf001b01bee0",
+          "document_title": "Export to an XML file"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "No accepted end-to-end contract",
+        "Help sections were found; detailed modes and live availability still need checking"
+      ],
+      "next_step": "Source review of the wizard and a separate chain with configuration, data, and save/reopen",
+      "documented_sections": [
+        {
+          "section": "Ports",
+          "line": 10
+        },
+        {
+          "section": "Configuration wizard",
+          "line": 18
+        }
+      ],
+      "palette_observation": {
+        "source": "live-palette",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>XML_File;TreeText",
+        "observed_label": "XML File",
+        "proof_scope": "presence_only"
+      }
+    },
+    {
+      "id": "workspace.bootstrap_observe",
+      "family": "workspace",
+      "goal": "workspace: bootstrap_observe",
+      "modes": [
+        "bootstrap_observe"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "workspace.prepare",
+      "family": "workspace",
+      "goal": "workspace: prepare",
+      "modes": [
+        "prepare"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "workspace.tabs",
+      "family": "workspace",
+      "goal": "workspace: tabs",
+      "modes": [
+        "tabs"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "package.create",
+      "family": "package",
+      "goal": "package: create",
+      "modes": [
+        "create"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "package.open",
+      "family": "package",
+      "goal": "package: open",
+      "modes": [
+        "open"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "package.close",
+      "family": "package",
+      "goal": "package: close",
+      "modes": [
+        "close"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "package.save",
+      "family": "package",
+      "goal": "package: save",
+      "modes": [
+        "save"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "package.save_as",
+      "family": "package",
+      "goal": "package: save_as",
+      "modes": [
+        "save_as"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "package.read_only",
+      "family": "package",
+      "goal": "package: read_only",
+      "modes": [
+        "read_only"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "package.conflict",
+      "family": "package",
+      "goal": "package: conflict",
+      "modes": [
+        "conflict"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.node_add",
+      "family": "graph",
+      "goal": "graph: node_add",
+      "modes": [
+        "node_add"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.node_rename",
+      "family": "graph",
+      "goal": "graph: node_rename",
+      "modes": [
+        "node_rename"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.node_move",
+      "family": "graph",
+      "goal": "graph: node_move",
+      "modes": [
+        "node_move"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.node_delete",
+      "family": "graph",
+      "goal": "graph: node_delete",
+      "modes": [
+        "node_delete"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.node_clone",
+      "family": "graph",
+      "goal": "graph: node_clone",
+      "modes": [
+        "node_clone"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.clipboard_copy_cut_paste",
+      "family": "graph",
+      "goal": "graph: clipboard_copy_cut_paste",
+      "modes": [
+        "clipboard_copy_cut_paste"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.link_create",
+      "family": "graph",
+      "goal": "graph: link_create",
+      "modes": [
+        "link_create"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.link_delete",
+      "family": "graph",
+      "goal": "graph: link_delete",
+      "modes": [
+        "link_delete"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.link_reconnect",
+      "family": "graph",
+      "goal": "graph: link_reconnect",
+      "modes": [
+        "link_reconnect"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.port_settings",
+      "family": "graph",
+      "goal": "graph: port_settings",
+      "modes": [
+        "port_settings"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "graph.auto_link_retain_remove",
+      "family": "graph",
+      "goal": "graph: auto_link_retain_remove",
+      "modes": [
+        "auto_link_retain_remove"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "files.upload",
+      "family": "files",
+      "goal": "files: upload",
+      "modes": [
+        "upload"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "files.download",
+      "family": "files",
+      "goal": "files: download",
+      "modes": [
+        "download"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "files.overwrite",
+      "family": "files",
+      "goal": "files: overwrite",
+      "modes": [
+        "overwrite"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "files.partial_transfer",
+      "family": "files",
+      "goal": "files: partial_transfer",
+      "modes": [
+        "partial_transfer"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "connections.create",
+      "family": "connections",
+      "goal": "connections: create",
+      "modes": [
+        "create"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "connections.configure",
+      "family": "connections",
+      "goal": "connections: configure",
+      "modes": [
+        "configure"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "connections.test",
+      "family": "connections",
+      "goal": "connections: test",
+      "modes": [
+        "test"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "connections.connect",
+      "family": "connections",
+      "goal": "connections: connect",
+      "modes": [
+        "connect"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "connections.disconnect",
+      "family": "connections",
+      "goal": "connections: disconnect",
+      "modes": [
+        "disconnect"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "connections.delete",
+      "family": "connections",
+      "goal": "connections: delete",
+      "modes": [
+        "delete"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "variables.package",
+      "family": "variables",
+      "goal": "variables: package",
+      "modes": [
+        "package"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "variables.workflow",
+      "family": "variables",
+      "goal": "variables: workflow",
+      "modes": [
+        "workflow"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "variables.node",
+      "family": "variables",
+      "goal": "variables: node",
+      "modes": [
+        "node"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "variables.mapping",
+      "family": "variables",
+      "goal": "variables: mapping",
+      "modes": [
+        "mapping"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "variables.control_ports",
+      "family": "variables",
+      "goal": "variables: control_ports",
+      "modes": [
+        "control_ports"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "submodel.enter_leave",
+      "family": "submodel",
+      "goal": "submodel: enter_leave",
+      "modes": [
+        "enter_leave"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "submodel.compose",
+      "family": "submodel",
+      "goal": "submodel: compose",
+      "modes": [
+        "compose"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "submodel.expand",
+      "family": "submodel",
+      "goal": "submodel: expand",
+      "modes": [
+        "expand"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "submodel.boundary_mapping",
+      "family": "submodel",
+      "goal": "submodel: boundary_mapping",
+      "modes": [
+        "boundary_mapping"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "execution.start",
+      "family": "execution",
+      "goal": "execution: start",
+      "modes": [
+        "start"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "execution.status",
+      "family": "execution",
+      "goal": "execution: status",
+      "modes": [
+        "status"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "execution.wait",
+      "family": "execution",
+      "goal": "execution: wait",
+      "modes": [
+        "wait"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "execution.stop",
+      "family": "execution",
+      "goal": "execution: stop",
+      "modes": [
+        "stop"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "execution.error_repair",
+      "family": "execution",
+      "goal": "execution: error_repair",
+      "modes": [
+        "error_repair"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "results.schema",
+      "family": "results",
+      "goal": "results: schema",
+      "modes": [
+        "schema"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "results.count",
+      "family": "results",
+      "goal": "results: count",
+      "modes": [
+        "count"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "results.sample",
+      "family": "results",
+      "goal": "results: sample",
+      "modes": [
+        "sample"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "results.full_small_dataset",
+      "family": "results",
+      "goal": "results: full_small_dataset",
+      "modes": [
+        "full_small_dataset"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "results.empty",
+      "family": "results",
+      "goal": "results: empty",
+      "modes": [
+        "empty"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "results.visualizer",
+      "family": "results",
+      "goal": "results: visualizer",
+      "modes": [
+        "visualizer"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "results.export",
+      "family": "results",
+      "goal": "results: export",
+      "modes": [
+        "export"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "agent.observe",
+      "family": "agent",
+      "goal": "agent: observe",
+      "modes": [
+        "observe"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "agent.ui_gesture",
+      "family": "agent",
+      "goal": "agent: ui_gesture",
+      "modes": [
+        "ui_gesture"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "agent.reconcile",
+      "family": "agent",
+      "goal": "agent: reconcile",
+      "modes": [
+        "reconcile"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "agent.repair",
+      "family": "agent",
+      "goal": "agent: repair",
+      "modes": [
+        "repair"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "agent.abandon",
+      "family": "agent",
+      "goal": "agent: abandon",
+      "modes": [
+        "abandon"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "agent.goal_obligations",
+      "family": "agent",
+      "goal": "agent: goal_obligations",
+      "modes": [
+        "goal_obligations"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "agent.restart_checkpoint",
+      "family": "agent",
+      "goal": "agent: restart_checkpoint",
+      "modes": [
+        "restart_checkpoint"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.source_provenance",
+      "family": "delivery",
+      "goal": "delivery: source_provenance",
+      "modes": [
+        "source_provenance"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.catalog_compatibility",
+      "family": "delivery",
+      "goal": "delivery: catalog_compatibility",
+      "modes": [
+        "catalog_compatibility"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.skill_compatibility",
+      "family": "delivery",
+      "goal": "delivery: skill_compatibility",
+      "modes": [
+        "skill_compatibility"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.native_codex",
+      "family": "delivery",
+      "goal": "delivery: native_codex",
+      "modes": [
+        "native_codex"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.native_hermes",
+      "family": "delivery",
+      "goal": "delivery: native_hermes",
+      "modes": [
+        "native_hermes"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.macos",
+      "family": "delivery",
+      "goal": "delivery: macos",
+      "modes": [
+        "macos"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.linux",
+      "family": "delivery",
+      "goal": "delivery: linux",
+      "modes": [
+        "linux"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.windows",
+      "family": "delivery",
+      "goal": "delivery: windows",
+      "modes": [
+        "windows"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    },
+    {
+      "id": "delivery.rollback",
+      "family": "delivery",
+      "goal": "delivery: rollback",
+      "modes": [
+        "rollback"
+      ],
+      "contract": "domain_operation",
+      "status": "planned",
+      "source_dependencies": [
+        {
+          "source": "scope-plan",
+          "section": "13.1 / P1–P9"
+        }
+      ],
+      "supported_profiles": [],
+      "unit_evidence": [],
+      "live_evidence": [],
+      "known_gaps": [
+        "A separate contract and acceptance on the selected runtime are required"
+      ],
+      "next_step": "Bind the handler, sources, effects, and an independent proof of the result"
+    }
+  ]
+}

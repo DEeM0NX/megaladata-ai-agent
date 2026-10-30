@@ -1,4 +1,4 @@
-import { ZenData } from "@megaladata-ai-agent/console-core/model.js"
+import { ZenData } from "@opencode-ai/console-core/model.js"
 import {
   fromAnthropicChunk,
   fromAnthropicRequest,

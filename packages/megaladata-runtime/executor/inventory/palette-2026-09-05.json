@@ -1,0 +1,575 @@
+{
+  "schema_version": 1,
+  "kind": "observed_palette_inventory",
+  "run_id": "20260905-151931-7698def0",
+  "audit_sha256": "28451c53e483ce2ebfb332f78a30861f87ae34f5166c02eb5c9fde5d85693f84",
+  "assertions_passed": 24,
+  "client_revision": "7eaebd2ef60d3c8204b5f844c674d43c337717095349e2b459f2e15abf81f9ea",
+  "model": {
+    "provider": "openai-codex",
+    "model": "gpt-5.6-luna",
+    "reasoning": "medium"
+  },
+  "inventory": {
+    "groups": {
+      "Quick_access": "Quick access",
+      "Import": "Import",
+      "Transformation": "Transformation",
+      "Control": "Control",
+      "Exploration": "Exploration",
+      "Preprocessing": "Preprocessing",
+      "Data_Mining": "Data Mining",
+      "Scripting": "Scripting",
+      "Variables": "Variables",
+      "Data_Tree": "Data Tree",
+      "Integration": "Integration",
+      "Export": "Export"
+    },
+    "components": [
+      {
+        "group_id": "Import",
+        "component_id": "1C_Query",
+        "label": "1C Query",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>1C_Query;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Import",
+        "component_id": "Database",
+        "label": "Database",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Database;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Import",
+        "component_id": "Text_File",
+        "label": "Text File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Text_File;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Import",
+        "component_id": "Deductor_Warehouse",
+        "label": "Deductor Warehouse",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Deductor_Warehouse;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Import",
+        "component_id": "Excel_File",
+        "label": "Excel File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Excel_File;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Import",
+        "component_id": "Kafka",
+        "label": "Kafka",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Kafka;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Import",
+        "component_id": "Megaladata_Data_файл",
+        "label": "Megaladata Data File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>Megaladata_Data_файл;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Import",
+        "component_id": "XML_File",
+        "label": "XML File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Import>XML_File;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Grouping",
+        "label": "Grouping",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Grouping;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Date_and_Time",
+        "label": "Date and Time",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Date_and_Time;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Enrich_Data",
+        "label": "Enrich Data",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Enrich_Data;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Replace",
+        "label": "Replace",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Replace;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Calculator",
+        "label": "Calculator",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Calculator;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Cross Table",
+        "label": "Cross Table",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Cross Table;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Union",
+        "label": "Union",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Union;TreeText",
+        "observed_at_row": 24
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Field_Features",
+        "label": "Field Features",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Field_Features;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Ungroup",
+        "label": "Ungroup",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Ungroup;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Unpivoting",
+        "label": "Unpivoting",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Unpivoting;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Lag",
+        "label": "Lag",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Lag;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Join",
+        "label": "Join",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Join;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Column Union",
+        "label": "Column Union",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Column Union;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Сортировка",
+        "label": "Sorting",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Сортировка;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Transformation",
+        "component_id": "Row_Filter",
+        "label": "Row Filter",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Transformation>Row_Filter;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Control",
+        "component_id": "Node_Execution",
+        "label": "Node Execution",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Node_Execution;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Control",
+        "component_id": "Supernode",
+        "label": "Supernode",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Supernode;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Control",
+        "component_id": "Reference Node",
+        "label": "Reference Node",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Reference Node;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Control",
+        "component_id": "Условие",
+        "label": "Condition",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Условие;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Control",
+        "component_id": "Loop",
+        "label": "Loop",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Control>Loop;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Exploration",
+        "component_id": "Autocorrelation",
+        "label": "Autocorrelation",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Autocorrelation;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Exploration",
+        "component_id": "Duplicates_and_Inconsistencies",
+        "label": "Duplicates and Inconsistencies",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Duplicates_and_Inconsistencies;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Exploration",
+        "component_id": "Data_Quality",
+        "label": "Data Quality",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Data_Quality;TreeText",
+        "observed_at_row": 26
+      },
+      {
+        "group_id": "Exploration",
+        "component_id": "Correlation_Analysis",
+        "label": "Correlation Analysis",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Correlation_Analysis;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Exploration",
+        "component_id": "Factor_Analysis",
+        "label": "Factor Analysis",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Exploration>Factor_Analysis;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Preprocessing",
+        "component_id": "Imputation",
+        "label": "Imputation",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Imputation;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Preprocessing",
+        "component_id": "Binning",
+        "label": "Binning",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Binning;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Preprocessing",
+        "component_id": "Coarse_Classes",
+        "label": "Coarse Classes",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Coarse_Classes;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Preprocessing",
+        "component_id": "Partitioning",
+        "label": "Partitioning",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Partitioning;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Preprocessing",
+        "component_id": "Eliminate_Outliers",
+        "label": "Eliminate Outliers",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Eliminate_Outliers;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Preprocessing",
+        "component_id": "Smoothing",
+        "label": "Smoothing",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Smoothing;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Preprocessing",
+        "component_id": "Sampling",
+        "label": "Sampling",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Preprocessing>Sampling;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Association_Rules",
+        "label": "Association Rules",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Association_Rules;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Clustering",
+        "label": "Clustering",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Clustering;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Transaction_Clustering",
+        "label": "Transaction Clustering",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Transaction_Clustering;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Linear_Regression",
+        "label": "Linear Regression",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Linear_Regression;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Logistic_Regression",
+        "label": "Logistic Regression",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Logistic_Regression;TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Neural_Net_(classification)",
+        "label": "Neural Net (classification)",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Neural_Net_(classification);TreeText",
+        "observed_at_row": 28
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Neural_Net_(regression)",
+        "label": "Neural Net (regression)",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Neural_Net_(regression);TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "Self-Organizing_Network",
+        "label": "Self-Organizing Network",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>Self-Organizing_Network;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "ARIMAX",
+        "label": "ARIMAX",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>ARIMAX;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Data_Mining",
+        "component_id": "EM_Clustering",
+        "label": "EM Clustering",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Mining>EM_Clustering;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Scripting",
+        "component_id": "JavaScript",
+        "label": "JavaScript",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Scripting>JavaScript;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Scripting",
+        "component_id": "Python",
+        "label": "Python",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Scripting>Python;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Variables",
+        "component_id": "Replace_(variables)",
+        "label": "Replace (variables)",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Replace_(variables);TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Variables",
+        "component_id": "Calculator_(variables)",
+        "label": "Calculator (variables)",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Calculator_(variables);TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Variables",
+        "component_id": "Variables_to_Table",
+        "label": "Variables to Table",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Variables_to_Table;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Variables",
+        "component_id": "Variable_Union",
+        "label": "Variable Union",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Variable_Union;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Variables",
+        "component_id": "Table_to_Variables",
+        "label": "Table to Variables",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Variables>Table_to_Variables;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Data_Tree",
+        "component_id": "Tree_to_Table",
+        "label": "Tree to Table",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_to_Table;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Data_Tree",
+        "component_id": "Tree_to_JSON",
+        "label": "Tree to JSON",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_to_JSON;TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Data_Tree",
+        "component_id": "Calculator_(Tree)",
+        "label": "Calculator (Tree)",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Calculator_(Tree);TreeText",
+        "observed_at_row": 30
+      },
+      {
+        "group_id": "Data_Tree",
+        "component_id": "Tree_Union",
+        "label": "Tree Union",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_Union;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Data_Tree",
+        "component_id": "Tree_Join",
+        "label": "Tree Join",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Tree_Join;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Data_Tree",
+        "component_id": "Table_to_Tree",
+        "label": "Table to Tree",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>Table_to_Tree;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Data_Tree",
+        "component_id": "JSON_to_Tree",
+        "label": "JSON to Tree",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Data_Tree>JSON_to_Tree;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Integration",
+        "component_id": "Program_Execution",
+        "label": "Program Execution",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>Program_Execution;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Integration",
+        "component_id": "XML_Parsing",
+        "label": "XML Parsing",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>XML_Parsing;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Integration",
+        "component_id": "XML_Generation",
+        "label": "XML Generation",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>XML_Generation;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Integration",
+        "component_id": "REST Request",
+        "label": "REST Request",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>REST Request;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Integration",
+        "component_id": "SOAP Request",
+        "label": "SOAP Request",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>SOAP Request;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Integration",
+        "component_id": "SQL Script",
+        "label": "SQL Script",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Integration>SQL Script;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Export",
+        "component_id": "Database",
+        "label": "Database",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Database;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Export",
+        "component_id": "Text_File",
+        "label": "Text File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Text_File;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Export",
+        "component_id": "Deductor_Warehouse",
+        "label": "Deductor Warehouse",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Deductor_Warehouse;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Export",
+        "component_id": "Excel_File",
+        "label": "Excel File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Excel_File;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Export",
+        "component_id": "Kafka",
+        "label": "Kafka",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Kafka;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Export",
+        "component_id": "Megaladata_Data_файл",
+        "label": "Megaladata Data File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>Megaladata_Data_файл;TreeText",
+        "observed_at_row": 32
+      },
+      {
+        "group_id": "Export",
+        "component_id": "XML_File",
+        "label": "XML File",
+        "tid": "MF;TF-1;ModelForm;colVendors_Components>Export>XML_File;TreeText",
+        "observed_at_row": 32
+      }
+    ],
+    "complete": false
+  },
+  "limitations": [
+    "Observed palette entries only; hidden, virtualized or unexpanded entries may be absent.",
+    "This proves constrained collection, not complete component/mode coverage or licensing."
+  ]
+}

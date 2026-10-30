@@ -1,1 +1,1 @@
-export { ID as PtyID } from "@megaladata-ai-agent/schema/pty"
+export { ID as PtyID } from "@opencode-ai/schema/pty"

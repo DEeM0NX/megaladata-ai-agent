@@ -96,7 +96,7 @@ export async function stageResources(input: {
         .update(input.text ? normalizeText(contents) : contents)
         .digest("hex") !== input.expected
     )
-      throw new Error("MEGALADATA_BUILD_INPUT_HASH_MISMATCH")
+      throw new Error(`MEGALADATA_BUILD_INPUT_HASH_MISMATCH: ${input.path}`)
   }
   await rm(staging, { recursive: true, force: true })
   await mkdir(join(staging, "bin"), { recursive: true })

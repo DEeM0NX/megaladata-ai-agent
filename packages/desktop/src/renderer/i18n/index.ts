@@ -1,5 +1,9 @@
 import * as i18n from "@solid-primitives/i18n"
-import { DESKTOP_NATIVE_LOCALES, type DesktopNativeLocale } from "../../../../app/src/i18n/desktop-native"
+import {
+  DESKTOP_NATIVE_LOCALES,
+  detectDesktopNativeLocale,
+  type DesktopNativeLocale,
+} from "../../../../app/src/i18n/desktop-native"
 
 import { dict as desktopEn } from "./en"
 import { dict as desktopZh } from "./zh"
@@ -71,8 +75,8 @@ type RawDictionary = typeof desktopEn
 type Dictionary = Record<keyof i18n.Flatten<RawDictionary>, string>
 
 function detectLocale(): Locale {
-  // The menu follows the saved language. Without a choice it stays English, like the application interface.
-  return "en"
+  if (typeof navigator !== "object") return "en"
+  return detectDesktopNativeLocale(navigator.languages?.length ? navigator.languages : [navigator.language])
 }
 
 function parseLocale(value: unknown): Locale | null {

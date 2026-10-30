@@ -1,6 +1,6 @@
 import { onCleanup } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
-import type { Megaladata } from "@megaladata-ai-agent/schema/megaladata"
+import type { Megaladata } from "@opencode-ai/schema/megaladata"
 import { Product } from "@megaladata-ai-agent/product"
 
 export function megaladataError(value: unknown) {

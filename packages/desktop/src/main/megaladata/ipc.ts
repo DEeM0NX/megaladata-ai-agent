@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron"
 import type { IpcMainInvokeEvent } from "electron"
 import { Option, Schema } from "effect"
-import { Megaladata } from "@megaladata-ai-agent/schema/megaladata"
+import { Megaladata } from "@opencode-ai/schema/megaladata"
 
 export function registerMegaladataIpc(api: Megaladata.API) {
   function sender(event: IpcMainInvokeEvent) {

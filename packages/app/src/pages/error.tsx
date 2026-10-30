@@ -1,13 +1,11 @@
-import { Product } from "@megaladata-ai-agent/product"
-import { TextField } from "@megaladata-ai-agent/ui/text-field"
+import { TextField } from "@opencode-ai/ui/text-field"
 import * as Sentry from "@sentry/solid"
-import { Logo } from "@megaladata-ai-agent/ui/logo"
-import { Button } from "@megaladata-ai-agent/ui/button"
+import { Logo } from "@opencode-ai/ui/logo"
+import { Button } from "@opencode-ai/ui/button"
 import { Component, createSignal, onMount, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { usePlatform } from "@/context/platform"
 import { useLanguage } from "@/context/language"
-import { Icon } from "@megaladata-ai-agent/ui/icon"
 import { errorDescriptionKey } from "./error-description"
 
 export type InitError = {
@@ -350,17 +348,6 @@ export const ErrorPage: Component<ErrorPageProps> = (props) => {
           {(message) => <p class="text-xs text-text-danger-base text-center max-w-2xl">{message()}</p>}
         </Show>
         <div class="flex flex-col items-center gap-2">
-          <div class="flex items-center justify-center gap-1">
-            {language.t("error.page.report.prefix")}
-            <button
-              type="button"
-              class="flex items-center text-text-interactive-base gap-1"
-              onClick={() => platform.openExternal(Product.support)}
-            >
-              <div>{language.t("error.page.report.discord")}</div>
-              <Icon name="discord" class="text-text-interactive-base" />
-            </button>
-          </div>
           <Show when={platform.version}>
             {(version) => (
               <p class="text-xs text-text-weak">{language.t("error.page.version", { version: version() })}</p>

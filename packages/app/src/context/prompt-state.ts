@@ -1,5 +1,5 @@
-import { checksum } from "@megaladata-ai-agent/core/util/encode"
-import type { FilePartSource } from "@megaladata-ai-agent/sdk/v2/client"
+import { checksum } from "@opencode-ai/core/util/encode"
+import type { FilePartSource } from "@opencode-ai/sdk/v2/client"
 import { batch, createMemo, type Accessor } from "solid-js"
 import { createStore, type SetStoreFunction } from "solid-js/store"
 import type { FileSelection } from "@/context/file"
@@ -38,6 +38,7 @@ export interface ImageAttachmentPart {
   id: string
   filename: string
   sourcePath?: string
+  reference?: import("@/utils/local-attachment").LocalAttachmentReference
   mime: string
   blob: BlobReference
 }

@@ -1,4 +1,3 @@
-import { Product } from "@megaladata-ai-agent/product"
 import {
   createEffect,
   createMemo,
@@ -17,17 +16,17 @@ import { useNavigate, useParams } from "@solidjs/router"
 import { useLayout, LocalProject } from "@/context/layout"
 import { useServerSync } from "@/context/server-sync"
 import { Persist, persisted } from "@/utils/persist"
-import { base64Encode } from "@megaladata-ai-agent/core/util/encode"
+import { base64Encode } from "@opencode-ai/core/util/encode"
 import { decode64 } from "@/utils/base64"
-import { ResizeHandle } from "@megaladata-ai-agent/ui/resize-handle"
-import { Button } from "@megaladata-ai-agent/ui/button"
-import { Icon as IconV2 } from "@megaladata-ai-agent/ui/v2/icon"
-import { IconButton } from "@megaladata-ai-agent/ui/icon-button"
-import { Tooltip } from "@megaladata-ai-agent/ui/tooltip"
-import { DropdownMenu } from "@megaladata-ai-agent/ui/dropdown-menu"
-import { Dialog } from "@megaladata-ai-agent/ui/dialog"
-import { getFilename } from "@megaladata-ai-agent/core/util/path"
-import { Session } from "@megaladata-ai-agent/sdk/v2/client"
+import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
+import { Button } from "@opencode-ai/ui/button"
+import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
+import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Tooltip } from "@opencode-ai/ui/tooltip"
+import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
+import { Dialog } from "@opencode-ai/ui/dialog"
+import { getFilename } from "@opencode-ai/core/util/path"
+import { Session } from "@opencode-ai/sdk/v2/client"
 import { usePlatform } from "@/context/platform"
 import { useSettings } from "@/context/settings"
 import { createStore, produce, reconcile } from "solid-js/store"
@@ -41,8 +40,8 @@ import { clearWorkspaceTerminals } from "@/context/terminal"
 import { pickSessionCacheEvictions } from "@/context/global-sync/session-cache"
 import { useNotification } from "@/context/notification"
 import { usePermission } from "@/context/permission"
-import { Binary } from "@megaladata-ai-agent/core/util/binary"
-import { retry } from "@megaladata-ai-agent/core/util/retry"
+import { Binary } from "@opencode-ai/core/util/binary"
+import { retry } from "@opencode-ai/core/util/retry"
 import { playSoundById } from "@/utils/sound"
 import { createAim } from "@/utils/aim"
 import { Worktree as WorktreeState } from "@/utils/worktree"
@@ -50,8 +49,8 @@ import { setSessionHandoff } from "@/pages/session/handoff"
 import { SessionRouteKey, SessionStateKey } from "@/utils/server-scope"
 import { listAllSessions } from "@/utils/session"
 
-import { useDialog } from "@megaladata-ai-agent/ui/context/dialog"
-import { useTheme, type ColorScheme } from "@megaladata-ai-agent/ui/theme/context"
+import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { useTheme, type ColorScheme } from "@opencode-ai/ui/theme/context"
 import { useCommand, type CommandOption } from "@/context/command"
 import { ConstrainDragXAxis, getDraggableId } from "@/utils/solid-dnd"
 import { DebugBar } from "@/components/debug-bar"
@@ -2238,8 +2237,6 @@ export default function LegacyLayout(props: ParentProps) {
       settingsLabel={() => language.t("sidebar.settings")}
       settingsKeybind={() => command.keybind("settings.open")}
       onOpenSettings={openSettings}
-      helpLabel={() => language.t("sidebar.help")}
-      onOpenHelp={() => platform.openExternal(Product.support)}
       renderPanel={() =>
         mobile ? <SidebarPanel project={currentProject} mobile /> : <SidebarPanel project={currentProject} merged />
       }

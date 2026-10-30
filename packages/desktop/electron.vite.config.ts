@@ -1,9 +1,9 @@
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 import { defineConfig } from "electron-vite"
-import appPlugin from "@megaladata-ai-agent/app/vite"
+import appPlugin from "@opencode-ai/app/vite"
 import * as fs from "node:fs/promises"
 
-const MEGALADATA_AI_AGENT_SERVER_DIST = "../agent/dist/node"
+const MEGALADATA_AI_AGENT_SERVER_DIST = "../opencode/dist/node"
 
 const channel = (() => {
   const raw = process.env.MEGALADATA_AI_AGENT_CHANNEL
@@ -57,7 +57,7 @@ const require = __cjs_mod__.createRequire(import.meta.url);
       },
       externalizeDeps: {
         include: [nodePtyPkg],
-        exclude: ["@megaladata-ai-agent/product", "@megaladata-ai-agent/schema", "@megaladata-ai-agent/megaladata-host"],
+        exclude: ["@megaladata-ai-agent/product", "@opencode-ai/schema", "@megaladata-ai-agent/megaladata-host"],
       },
     },
     plugins: [

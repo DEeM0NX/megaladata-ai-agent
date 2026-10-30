@@ -1,4 +1,4 @@
-import { ScrollView } from "@megaladata-ai-agent/ui/scroll-view"
+import { ScrollView } from "@opencode-ai/ui/scroll-view"
 import { createHomeController } from "./home/home-controller"
 import { createHomeProjectsController } from "./home/home-projects-controller"
 import { HomeUtilityNav } from "./home/home-projects-view"
@@ -40,7 +40,6 @@ export function NewHome() {
           <HomeUtilityNav
             class="flex lg:hidden"
             onOpenSettings={projects.utility.settings}
-            onOpenHelp={projects.utility.help}
             language={projects.copy.language}
           />
         </div>

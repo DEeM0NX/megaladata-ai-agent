@@ -294,7 +294,7 @@ jobs:
           bun typecheck
           if ($LASTEXITCODE -ne 0) { throw "Host typecheck failed" }
           Pop-Location
-          Push-Location packages/agent
+          Push-Location packages/opencode
           bun typecheck
           if ($LASTEXITCODE -ne 0) { throw "Agent typecheck failed" }
           Pop-Location
@@ -323,6 +323,7 @@ jobs:
   macos:
     name: build (macos)
     needs: verify
+    if: vars.MEGALADATA_RELEASE_SKIP_MACOS != 'true'
     runs-on: macos-14
     timeout-minutes: 120
     env:
@@ -346,12 +347,12 @@ jobs:
       - name: Install locked macOS dependencies
         run: |
           test "$(uname -m)" = arm64
-          bun install --frozen-lockfile --filter megaladata-ai-agent --filter '@megaladata-ai-agent/desktop' --filter '@megaladata-ai-agent/agent' --filter '@megaladata-ai-agent/megaladata-host' --filter '@megaladata-ai-agent/product'
+          bun install --frozen-lockfile --filter megaladata-ai-agent --filter '@opencode-ai/desktop' --filter 'opencode' --filter '@megaladata-ai-agent/megaladata-host' --filter '@megaladata-ai-agent/product'
           node packages/desktop/node_modules/electron/install.js
       - name: Verify macOS source
         run: bun packages/desktop/scripts/check-macos.ts "$RUNNER_TEMP/macos-source-checks.json"
       - name: Build, verify and offline-smoke both macOS products
-        timeout-minutes: 105
+        timeout-minutes: 75
         run: bun packages/desktop/scripts/build-macos.ts --output "$RUNNER_TEMP/macos" --version "$MEGALADATA_AI_AGENT_VERSION"
       - name: Collect platform-specific metadata
         run: |
@@ -377,7 +378,7 @@ jobs:
     name: release
     # Every platform must pass. A manual run publishes only when it was started from a tag.
     needs: [verify, build, windows, macos]
-    if: always() && github.ref_type == 'tag' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.verify.result == 'success' && needs.build.result == 'success' && needs.windows.result == 'success' && needs.macos.result == 'success'
+    if: always() && github.ref_type == 'tag' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.verify.result == 'success' && needs.build.result == 'success' && needs.windows.result == 'success' && (needs.macos.result == 'success' || (vars.MEGALADATA_RELEASE_SKIP_MACOS == 'true' && needs.macos.result == 'skipped'))
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -409,7 +410,7 @@ jobs:
         run: |
           set -euo pipefail
           find "$RUNNER_TEMP/assets" -name '*.log' -delete
-          bun script/release-notes.ts --tag "$TAG" --channel "$CHANNEL" --assets "$RUNNER_TEMP/assets" --output "$RUNNER_TEMP/notes.md"
+          MEGALADATA_RELEASE_SKIP_MACOS="${{ vars.MEGALADATA_RELEASE_SKIP_MACOS }}" bun script/release-notes.ts --tag "$TAG" --channel "$CHANNEL" --assets "$RUNNER_TEMP/assets" --output "$RUNNER_TEMP/notes.md"
 
       - name: Publish release
         run: |

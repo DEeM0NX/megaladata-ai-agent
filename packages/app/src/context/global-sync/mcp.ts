@@ -1,4 +1,4 @@
-import type { McpServer } from "@megaladata-ai-agent/client/promise"
+import type { McpServer } from "@opencode-ai/client/promise"
 
 export async function toggleMcp(input: {
   status: McpServer["status"]["status"]

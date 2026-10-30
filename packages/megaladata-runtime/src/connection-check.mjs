@@ -4,11 +4,31 @@ import { join } from "node:path"
 import { browserDownloadScript } from "../client/lib/browser-downloads.mjs"
 import { browserLaunch } from "../client/lib/browser-launch.mjs"
 import { createRedactor } from "../client/lib/redact.mjs"
+import { createExecutionJournal } from "../client/lib/execution-journal.mjs"
+import { connectionTimelineScript } from "../client/lib/connection-recovery.mjs"
 
 const require = createRequire(new URL("../client/package.json", import.meta.url))
 
-export function browserEnvironment(profile, environment = process.env) {
-  return { ...environment, CHROME_LOG_FILE: join(profile, "chrome-debug.log") }
+export function browserEnvironment(profile, environment = process.env, platform = process.platform) {
+  const env = { ...environment, CHROME_LOG_FILE: join(profile, "chrome-debug.log") }
+  if (platform === "win32") {
+    // The host starts this process with a reduced environment and drops PATH.
+    // Headed Chromium then exits while the login form is still opening.
+    const root = environment.SYSTEMROOT || environment.SystemRoot || "C:\\Windows"
+    const path = [environment.PATH, environment.Path, join(root, "System32"), root, join(root, "System32", "Wbem")]
+      .filter((value) => typeof value === "string" && value.length)
+      .join(";")
+    return { ...env, PATH: path, Path: path, PATHEXT: environment.PATHEXT || ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.MSC" }
+  }
+  // SingletonSocket lives in Chromium's private temp directory, symlinked
+  // from the profile. Reserve 64 bytes for its generated name, socket and NUL
+  // within the conservative sockaddr_un SDK budget (104 bytes on macOS,
+  // 108 on Linux). Count UTF-8 bytes. macOS Chromium has its own override.
+  const temporary = (platform === "darwin" && environment.MAC_CHROMIUM_TMPDIR) || environment.TMPDIR || "/tmp"
+  const safe = temporary.startsWith("/") && Buffer.byteLength(temporary) + 64 <= (platform === "darwin" ? 104 : 108)
+    ? temporary : "/tmp"
+  return { ...env, TMPDIR: safe, TMP: safe, TEMP: safe,
+    ...(platform === "darwin" ? { MAC_CHROMIUM_TMPDIR: safe } : {}) }
 }
 
 export function browserLoggingArguments(profile) {
@@ -18,32 +38,67 @@ export function browserLoggingArguments(profile) {
 export function megaladataAddress(value) {
   const url = new URL(value)
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw Error("MEGALADATA_URL_INVALID")
-  // The public root redirects to /app/ without preserving the testable query.
-  if (url.origin === "https://app.megaladata.ai" && url.pathname === "/") url.pathname = "/app/"
+  // Public root and /app redirect to /app/; keep login and preparation on that exact path.
+  if (url.origin === "https://app.megaladata.ai" && ["/", "/app"].includes(url.pathname)) url.pathname = "/app/"
   url.searchParams.set("testable", "true")
   return url.href
 }
 
 // This function is reachable only from the private host channel, never from model tools.
 // It performs login and identity read-back only; no file panel or folder permission probe.
-export async function loginPage(page, candidate) {
+export async function loginPage(page, candidate, { deadline = Infinity, themeState = { reloaded: false }, onThemeReload } = {}) {
   const started = performance.now()
   let phase = "goto", phaseStarted = started, original
+  const remaining = limit => {
+    const left = deadline - Date.now()
+    if (left <= 0) throw Error("MEGALADATA_LOGIN_UNAVAILABLE")
+    return Math.min(limit, left)
+  }
   try {
-    await page.goto(megaladataAddress(candidate.url), { waitUntil: "domcontentloaded", timeout: 60_000 })
-    phase = "form"; phaseStarted = performance.now()
+    await page.goto(megaladataAddress(candidate.url), { waitUntil: "domcontentloaded", timeout: remaining(60_000) })
     const field = (name) => page.locator(`[data-tid="LoginForm;Login;${name}"]`)
     const avatar = page.locator('[data-tid="MF;cntMain;tlbMainToolbar;btnAvatar"]')
-    await avatar.or(field("edtUsername")).first().waitFor({ state: "visible", timeout: 60_000 })
+    for (;;) {
+      phase = "form"; phaseStarted = performance.now()
+      await avatar.or(field("edtUsername")).first().waitFor({ state: "visible", timeout: remaining(60_000) })
+      phase = "theme"; phaseStarted = performance.now()
+      const missing = await page.evaluate(function themeStylesheetMissing() {
+        const missing = [...document.querySelectorAll('link[rel~="stylesheet"][href]')].some(link => {
+          const url = new URL(link.href, location.href)
+          if (url.origin !== location.origin || !/\/packages\/deductor-theme\/build\/resources\/deductor-theme-all(?:-debug)?\.css$/.test(url.pathname)) return false
+          try { return !link.sheet || link.sheet.cssRules.length === 0 }
+          catch { return true }
+        })
+        return missing && globalThis.__megaladataThemeStartupInteracted === true ? "interacted" : missing
+      })
+      if (missing !== true && missing !== "interacted") break
+      themeState.failed = true
+      if (themeState.reloaded || missing === "interacted" || await avatar.isVisible()) throw Error("MEGALADATA_LOGIN_UNAVAILABLE")
+      // No credential or workspace gesture has happened. Never reload a page
+      // handed to MCP, and never give this recovery a fresh time allowance.
+      remaining(60_000)
+      themeState.reloaded = true
+      await onThemeReload?.({ phase: "theme_reload", reason: "theme_stylesheet_rules_missing" })
+      await Promise.all([
+        page.waitForEvent("domcontentloaded", { timeout: remaining(60_000) }),
+        page.evaluate(() => {
+          // Keep the final human-input check and navigation in one browser task:
+          // a journal write must not open a window for discarding new input.
+          if (globalThis.__megaladataThemeStartupInteracted === true) throw Error("MEGALADATA_LOGIN_UNAVAILABLE")
+          location.reload()
+        }),
+      ])
+    }
+    phase = "form"; phaseStarted = performance.now()
     if (!(await avatar.isVisible())) {
       phase = "submit"; phaseStarted = performance.now()
-      await field("edtUsername").locator("input").fill(candidate.username)
-      await field("edtUsername").locator("input").press("Tab")
+      await field("edtUsername").locator("input").fill(candidate.username, { timeout: remaining(30_000) })
+      await field("edtUsername").locator("input").press("Tab", { timeout: remaining(30_000) })
       const password = field("edtPassword").locator("input")
       // Passwordless accounts may make an already empty field readonly after username lookup.
-      if (candidate.password !== "" || (await password.inputValue()) !== "") await password.fill(candidate.password)
-      await field("btnLogin").click()
-      await avatar.waitFor({ state: "visible", timeout: 30_000 }).catch((error) => {
+      if (candidate.password !== "" || (await password.inputValue()) !== "") await password.fill(candidate.password, { timeout: remaining(30_000) })
+      await field("btnLogin").click({ timeout: remaining(30_000) })
+      await avatar.waitFor({ state: "visible", timeout: remaining(30_000) }).catch((error) => {
         original = error
         throw Error("MEGALADATA_LOGIN_REJECTED")
       })
@@ -123,15 +178,24 @@ function loginFailure(error, candidate, phase, duration, elapsed) {
   }
 }
 
-export async function loginBrowser({ browserPath, profile, candidate, headless = false, keepOpen = false, signal, onContextCreated }) {
+export async function loginBrowser({ browserPath, profile, candidate, headless = false, keepOpen = false, signal, onContextCreated, downloadsPath,
+  deadline = Date.now() + 150_000, onRetry }) {
   signal?.throwIfAborted()
   const { chromium } = require("playwright-core")
   const launch = browserLaunch(headless)
   await mkdir(profile, { recursive: true, mode: 0o700 })
   signal?.throwIfAborted()
+  // Both attempts share the original admission deadline and the same profile.
+  const record = onRetry ?? createExecutionJournal({ directory: profile, metadata: { sessionId: null } })
+  const themeState = { reloaded: false }
+  for (let attempt = 0; attempt < 2; attempt++) {
+  signal?.throwIfAborted()
+  if (Date.now() >= deadline) throw Error("MEGALADATA_LOGIN_UNAVAILABLE")
   const context = await chromium
     .launchPersistentContext(profile, {
       executablePath: browserPath,
+      ...(downloadsPath?{downloadsPath}:{}),
+      timeout: Math.max(1, Math.min(30_000, deadline - Date.now())),
       headless,
       chromiumSandbox: true,
       // A retained context belongs to its runtime/cold owner. Its native
@@ -167,13 +231,23 @@ export async function loginBrowser({ browserPath, profile, candidate, headless =
   const close = () => closing.promise ??= context.close()
   const cancel = () => { void close().catch(() => undefined) }
   signal?.addEventListener("abort", cancel, { once: true })
+  const timer = setTimeout(cancel, Math.max(1, deadline - Date.now()))
   try {
     signal?.throwIfAborted()
     // This authenticated page predates MCP; its capability choice must already
     // match the executor's download/byte-verification path on the first load.
     await context.addInitScript({ content: browserDownloadScript(candidate.url) })
+    if (keepOpen) await context.addInitScript({ content: connectionTimelineScript(candidate.url) })
+    await context.addInitScript(() => {
+      // A human can interact with the headed startup page before host login.
+      // Once that happens, failing startup is safer than reloading their state.
+      for (const type of ["pointerdown", "keydown", "input", "change"])
+        addEventListener(type, event => {
+          if (event.isTrusted) globalThis.__megaladataThemeStartupInteracted = true
+        }, { capture: true })
+    })
     if (onContextCreated) await onContextCreated(context)
-    const result = await loginPage(context.pages()[0] ?? (await context.newPage()), candidate)
+    const result = await loginPage(context.pages()[0] ?? (await context.newPage()), candidate, { deadline, themeState, onThemeReload: record })
     signal?.throwIfAborted()
     if (!keepOpen) {
       await close()
@@ -182,11 +256,19 @@ export async function loginBrowser({ browserPath, profile, candidate, headless =
     // MCP receives this same live context through its public contextGetter API.
     return { ...result, context }
   } catch (error) {
-    await close().catch(() => { throw Error("MEGALADATA_RUNTIME_CLEANUP_FAILED", error?.cause?.login ? { cause: error.cause } : undefined) })
+    const closed = await close().then(() => true, () => false)
     signal?.throwIfAborted()
+    // Only a classified transient login failure may retry, after confirmed close.
+    if (closed && attempt === 0 && !themeState.failed && error?.message === "MEGALADATA_LOGIN_UNAVAILABLE" && Date.now() < deadline) {
+      await record({ phase: "login_retry", attempt: 2, reason: error.message, login: error.cause?.login ?? null })
+      continue
+    }
     if (["MEGALADATA_ACCOUNT_MISMATCH", "MEGALADATA_LOGIN_REJECTED", "MEGALADATA_FOCUS_SETUP_FAILED"].includes(error?.message)) throw error
+    if (!closed) throw Error("MEGALADATA_RUNTIME_CLEANUP_FAILED", error?.cause?.login ? { cause: error.cause } : undefined)
     throw Error("MEGALADATA_LOGIN_UNAVAILABLE", error?.cause?.login ? { cause: error.cause } : undefined)
   } finally {
+    clearTimeout(timer)
     signal?.removeEventListener("abort", cancel)
+  }
   }
 }

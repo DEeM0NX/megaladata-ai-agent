@@ -1,13 +1,14 @@
 import * as i18n from "@solid-primitives/i18n"
 import { createEffect, createMemo, createResource } from "solid-js"
 import { createStore } from "solid-js/store"
-import { createSimpleContext } from "@megaladata-ai-agent/ui/context"
-import { pluralCategory, type UiI18nPluralKey } from "@megaladata-ai-agent/ui/context/i18n"
+import { createSimpleContext } from "@opencode-ai/ui/context"
+import { pluralCategory, type UiI18nPluralKey } from "@opencode-ai/ui/context/i18n"
 import { Persist, persisted } from "@/utils/persist"
 import { dict as en } from "@/i18n/en"
-import { dict as uiEn } from "@megaladata-ai-agent/ui/i18n/en"
+import { dict as uiEn } from "@opencode-ai/ui/i18n/en"
 import {
   createDesktopNativeBundle,
+  detectDesktopNativeLocale,
   DESKTOP_NATIVE_ENGLISH,
   DESKTOP_NATIVE_LABELS,
   DESKTOP_NATIVE_LOCALES,
@@ -49,67 +50,67 @@ const merge = (app: Promise<Source>, ui: Promise<Source>) =>
   Promise.all([app, ui]).then(([a, b]) => ({ ...base, ...i18n.flatten({ ...a.dict, ...b.dict }) }) as Dictionary)
 
 const loaders: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
-  zh: () => merge(import("@/i18n/zh"), import("@megaladata-ai-agent/ui/i18n/zh")),
-  zht: () => merge(import("@/i18n/zht"), import("@megaladata-ai-agent/ui/i18n/zht")),
-  ko: () => merge(import("@/i18n/ko"), import("@megaladata-ai-agent/ui/i18n/ko")),
-  de: () => merge(import("@/i18n/de"), import("@megaladata-ai-agent/ui/i18n/de")),
-  es: () => merge(import("@/i18n/es"), import("@megaladata-ai-agent/ui/i18n/es")),
-  fr: () => merge(import("@/i18n/fr"), import("@megaladata-ai-agent/ui/i18n/fr")),
-  da: () => merge(import("@/i18n/da"), import("@megaladata-ai-agent/ui/i18n/da")),
-  ja: () => merge(import("@/i18n/ja"), import("@megaladata-ai-agent/ui/i18n/ja")),
-  pl: () => merge(import("@/i18n/pl"), import("@megaladata-ai-agent/ui/i18n/pl")),
-  ru: () => merge(import("@/i18n/ru"), import("@megaladata-ai-agent/ui/i18n/ru")),
-  uk: () => merge(import("@/i18n/uk"), import("@megaladata-ai-agent/ui/i18n/uk")),
-  ar: () => merge(import("@/i18n/ar"), import("@megaladata-ai-agent/ui/i18n/ar")),
-  no: () => merge(import("@/i18n/no"), import("@megaladata-ai-agent/ui/i18n/no")),
-  br: () => merge(import("@/i18n/br"), import("@megaladata-ai-agent/ui/i18n/br")),
-  th: () => merge(import("@/i18n/th"), import("@megaladata-ai-agent/ui/i18n/th")),
-  bs: () => merge(import("@/i18n/bs"), import("@megaladata-ai-agent/ui/i18n/bs")),
-  tr: () => merge(import("@/i18n/tr"), import("@megaladata-ai-agent/ui/i18n/tr")),
-  hi: () => merge(import("@/i18n/hi"), import("@megaladata-ai-agent/ui/i18n/hi")),
-  nl: () => merge(import("@/i18n/nl"), import("@megaladata-ai-agent/ui/i18n/nl")),
-  id: () => merge(import("@/i18n/id"), import("@megaladata-ai-agent/ui/i18n/id")),
-  vi: () => merge(import("@/i18n/vi"), import("@megaladata-ai-agent/ui/i18n/vi")),
-  it: () => merge(import("@/i18n/it"), import("@megaladata-ai-agent/ui/i18n/it")),
-  ur: () => merge(import("@/i18n/ur"), import("@megaladata-ai-agent/ui/i18n/ur")),
-  pa: () => merge(import("@/i18n/pa"), import("@megaladata-ai-agent/ui/i18n/pa")),
-  az: () => merge(import("@/i18n/az"), import("@megaladata-ai-agent/ui/i18n/az")),
-  fi: () => merge(import("@/i18n/fi"), import("@megaladata-ai-agent/ui/i18n/fi")),
-  sv: () => merge(import("@/i18n/sv"), import("@megaladata-ai-agent/ui/i18n/sv")),
-  am: () => merge(import("@/i18n/am"), import("@megaladata-ai-agent/ui/i18n/am")),
-  bg: () => merge(import("@/i18n/bg"), import("@megaladata-ai-agent/ui/i18n/bg")),
-  bn: () => merge(import("@/i18n/bn"), import("@megaladata-ai-agent/ui/i18n/bn")),
-  ca: () => merge(import("@/i18n/ca"), import("@megaladata-ai-agent/ui/i18n/ca")),
-  cs: () => merge(import("@/i18n/cs"), import("@megaladata-ai-agent/ui/i18n/cs")),
-  dv: () => merge(import("@/i18n/dv"), import("@megaladata-ai-agent/ui/i18n/dv")),
-  dz: () => merge(import("@/i18n/dz"), import("@megaladata-ai-agent/ui/i18n/dz")),
-  el: () => merge(import("@/i18n/el"), import("@megaladata-ai-agent/ui/i18n/el")),
-  et: () => merge(import("@/i18n/et"), import("@megaladata-ai-agent/ui/i18n/et")),
-  fa: () => merge(import("@/i18n/fa"), import("@megaladata-ai-agent/ui/i18n/fa")),
-  fo: () => merge(import("@/i18n/fo"), import("@megaladata-ai-agent/ui/i18n/fo")),
-  hr: () => merge(import("@/i18n/hr"), import("@megaladata-ai-agent/ui/i18n/hr")),
-  hu: () => merge(import("@/i18n/hu"), import("@megaladata-ai-agent/ui/i18n/hu")),
-  hy: () => merge(import("@/i18n/hy"), import("@megaladata-ai-agent/ui/i18n/hy")),
-  is: () => merge(import("@/i18n/is"), import("@megaladata-ai-agent/ui/i18n/is")),
-  ka: () => merge(import("@/i18n/ka"), import("@megaladata-ai-agent/ui/i18n/ka")),
-  km: () => merge(import("@/i18n/km"), import("@megaladata-ai-agent/ui/i18n/km")),
-  lo: () => merge(import("@/i18n/lo"), import("@megaladata-ai-agent/ui/i18n/lo")),
-  lt: () => merge(import("@/i18n/lt"), import("@megaladata-ai-agent/ui/i18n/lt")),
-  lv: () => merge(import("@/i18n/lv"), import("@megaladata-ai-agent/ui/i18n/lv")),
-  mk: () => merge(import("@/i18n/mk"), import("@megaladata-ai-agent/ui/i18n/mk")),
-  mn: () => merge(import("@/i18n/mn"), import("@megaladata-ai-agent/ui/i18n/mn")),
-  ms: () => merge(import("@/i18n/ms"), import("@megaladata-ai-agent/ui/i18n/ms")),
-  my: () => merge(import("@/i18n/my"), import("@megaladata-ai-agent/ui/i18n/my")),
-  ne: () => merge(import("@/i18n/ne"), import("@megaladata-ai-agent/ui/i18n/ne")),
-  ro: () => merge(import("@/i18n/ro"), import("@megaladata-ai-agent/ui/i18n/ro")),
-  si: () => merge(import("@/i18n/si"), import("@megaladata-ai-agent/ui/i18n/si")),
-  sk: () => merge(import("@/i18n/sk"), import("@megaladata-ai-agent/ui/i18n/sk")),
-  sl: () => merge(import("@/i18n/sl"), import("@megaladata-ai-agent/ui/i18n/sl")),
-  sq: () => merge(import("@/i18n/sq"), import("@megaladata-ai-agent/ui/i18n/sq")),
-  sr: () => merge(import("@/i18n/sr"), import("@megaladata-ai-agent/ui/i18n/sr")),
-  tg: () => merge(import("@/i18n/tg"), import("@megaladata-ai-agent/ui/i18n/tg")),
-  tk: () => merge(import("@/i18n/tk"), import("@megaladata-ai-agent/ui/i18n/tk")),
-  uz: () => merge(import("@/i18n/uz"), import("@megaladata-ai-agent/ui/i18n/uz")),
+  zh: () => merge(import("@/i18n/zh"), import("@opencode-ai/ui/i18n/zh")),
+  zht: () => merge(import("@/i18n/zht"), import("@opencode-ai/ui/i18n/zht")),
+  ko: () => merge(import("@/i18n/ko"), import("@opencode-ai/ui/i18n/ko")),
+  de: () => merge(import("@/i18n/de"), import("@opencode-ai/ui/i18n/de")),
+  es: () => merge(import("@/i18n/es"), import("@opencode-ai/ui/i18n/es")),
+  fr: () => merge(import("@/i18n/fr"), import("@opencode-ai/ui/i18n/fr")),
+  da: () => merge(import("@/i18n/da"), import("@opencode-ai/ui/i18n/da")),
+  ja: () => merge(import("@/i18n/ja"), import("@opencode-ai/ui/i18n/ja")),
+  pl: () => merge(import("@/i18n/pl"), import("@opencode-ai/ui/i18n/pl")),
+  ru: () => merge(import("@/i18n/ru"), import("@opencode-ai/ui/i18n/ru")),
+  uk: () => merge(import("@/i18n/uk"), import("@opencode-ai/ui/i18n/uk")),
+  ar: () => merge(import("@/i18n/ar"), import("@opencode-ai/ui/i18n/ar")),
+  no: () => merge(import("@/i18n/no"), import("@opencode-ai/ui/i18n/no")),
+  br: () => merge(import("@/i18n/br"), import("@opencode-ai/ui/i18n/br")),
+  th: () => merge(import("@/i18n/th"), import("@opencode-ai/ui/i18n/th")),
+  bs: () => merge(import("@/i18n/bs"), import("@opencode-ai/ui/i18n/bs")),
+  tr: () => merge(import("@/i18n/tr"), import("@opencode-ai/ui/i18n/tr")),
+  hi: () => merge(import("@/i18n/hi"), import("@opencode-ai/ui/i18n/hi")),
+  nl: () => merge(import("@/i18n/nl"), import("@opencode-ai/ui/i18n/nl")),
+  id: () => merge(import("@/i18n/id"), import("@opencode-ai/ui/i18n/id")),
+  vi: () => merge(import("@/i18n/vi"), import("@opencode-ai/ui/i18n/vi")),
+  it: () => merge(import("@/i18n/it"), import("@opencode-ai/ui/i18n/it")),
+  ur: () => merge(import("@/i18n/ur"), import("@opencode-ai/ui/i18n/ur")),
+  pa: () => merge(import("@/i18n/pa"), import("@opencode-ai/ui/i18n/pa")),
+  az: () => merge(import("@/i18n/az"), import("@opencode-ai/ui/i18n/az")),
+  fi: () => merge(import("@/i18n/fi"), import("@opencode-ai/ui/i18n/fi")),
+  sv: () => merge(import("@/i18n/sv"), import("@opencode-ai/ui/i18n/sv")),
+  am: () => merge(import("@/i18n/am"), import("@opencode-ai/ui/i18n/am")),
+  bg: () => merge(import("@/i18n/bg"), import("@opencode-ai/ui/i18n/bg")),
+  bn: () => merge(import("@/i18n/bn"), import("@opencode-ai/ui/i18n/bn")),
+  ca: () => merge(import("@/i18n/ca"), import("@opencode-ai/ui/i18n/ca")),
+  cs: () => merge(import("@/i18n/cs"), import("@opencode-ai/ui/i18n/cs")),
+  dv: () => merge(import("@/i18n/dv"), import("@opencode-ai/ui/i18n/dv")),
+  dz: () => merge(import("@/i18n/dz"), import("@opencode-ai/ui/i18n/dz")),
+  el: () => merge(import("@/i18n/el"), import("@opencode-ai/ui/i18n/el")),
+  et: () => merge(import("@/i18n/et"), import("@opencode-ai/ui/i18n/et")),
+  fa: () => merge(import("@/i18n/fa"), import("@opencode-ai/ui/i18n/fa")),
+  fo: () => merge(import("@/i18n/fo"), import("@opencode-ai/ui/i18n/fo")),
+  hr: () => merge(import("@/i18n/hr"), import("@opencode-ai/ui/i18n/hr")),
+  hu: () => merge(import("@/i18n/hu"), import("@opencode-ai/ui/i18n/hu")),
+  hy: () => merge(import("@/i18n/hy"), import("@opencode-ai/ui/i18n/hy")),
+  is: () => merge(import("@/i18n/is"), import("@opencode-ai/ui/i18n/is")),
+  ka: () => merge(import("@/i18n/ka"), import("@opencode-ai/ui/i18n/ka")),
+  km: () => merge(import("@/i18n/km"), import("@opencode-ai/ui/i18n/km")),
+  lo: () => merge(import("@/i18n/lo"), import("@opencode-ai/ui/i18n/lo")),
+  lt: () => merge(import("@/i18n/lt"), import("@opencode-ai/ui/i18n/lt")),
+  lv: () => merge(import("@/i18n/lv"), import("@opencode-ai/ui/i18n/lv")),
+  mk: () => merge(import("@/i18n/mk"), import("@opencode-ai/ui/i18n/mk")),
+  mn: () => merge(import("@/i18n/mn"), import("@opencode-ai/ui/i18n/mn")),
+  ms: () => merge(import("@/i18n/ms"), import("@opencode-ai/ui/i18n/ms")),
+  my: () => merge(import("@/i18n/my"), import("@opencode-ai/ui/i18n/my")),
+  ne: () => merge(import("@/i18n/ne"), import("@opencode-ai/ui/i18n/ne")),
+  ro: () => merge(import("@/i18n/ro"), import("@opencode-ai/ui/i18n/ro")),
+  si: () => merge(import("@/i18n/si"), import("@opencode-ai/ui/i18n/si")),
+  sk: () => merge(import("@/i18n/sk"), import("@opencode-ai/ui/i18n/sk")),
+  sl: () => merge(import("@/i18n/sl"), import("@opencode-ai/ui/i18n/sl")),
+  sq: () => merge(import("@/i18n/sq"), import("@opencode-ai/ui/i18n/sq")),
+  sr: () => merge(import("@/i18n/sr"), import("@opencode-ai/ui/i18n/sr")),
+  tg: () => merge(import("@/i18n/tg"), import("@opencode-ai/ui/i18n/tg")),
+  tk: () => merge(import("@/i18n/tk"), import("@opencode-ai/ui/i18n/tk")),
+  uz: () => merge(import("@/i18n/uz"), import("@opencode-ai/ui/i18n/uz")),
 }
 
 function loadDict(locale: Locale) {
@@ -128,8 +129,8 @@ export function loadLocaleDict(locale: Locale) {
 }
 
 function detectLocale(): Locale {
-  // A language saved in settings wins. The first launch stays English even when the OS language is different.
-  return "en"
+  if (typeof navigator !== "object") return "en"
+  return detectDesktopNativeLocale(navigator.languages?.length ? navigator.languages : [navigator.language])
 }
 
 export function normalizeLocale(value: string): Locale {

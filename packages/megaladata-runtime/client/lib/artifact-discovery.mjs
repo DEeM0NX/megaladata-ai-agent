@@ -1,5 +1,75 @@
 import {workspaceUiCapability} from './workspace-ui.mjs';
 
+// Private package path: retain the native owner before the existing upload,
+// then observe completion without changing its original submission receipt.
+export async function completePackageUpload(page,task,upload,waitReady=waitArtifactDiscoveryReady) {
+ let binding,receipt=null;
+ const trace=[];
+ const result=(status,completion=null,error=null)=>({status,action_key:'artifact.package_completion',action_revision:'1',
+  operation_id:task.operation_id,phase:'native_completion',effect_possible:receipt?.effect_possible===true,
+  cleanup_complete:receipt?.cleanup_complete!==false,output:{upload:receipt,...(completion?{completion}:{})},error,trace});
+ try {
+  if(Date.now()>=task.deadline_at)throw Error('PACKAGE_UPLOAD_DEADLINE');
+  binding=await page.evaluateHandle(t=>{
+   const prep=globalThis.__megaladataDockPreparationV1,main=globalThis.bg?.app?.Application?.FInstance?.FMainForm;
+   const card=main?.Items?.Workspace?.getActiveTab?.(),controller=card?.Controller,form=controller?.FController;
+   const sender=form?.FFileSenderManager,input=form?.FFileInput,prefix=t.snapshot.workflow_ref.prefix;
+   const gridTid=prefix+';FileStorageForm;pnlFileStorage;tbl';
+   const grids=[...document.querySelectorAll('[data-tid='+JSON.stringify(gridTid)+']')];
+   const tabs=[...document.querySelectorAll('[data-tid='+JSON.stringify(t.snapshot.workflow_ref.tab_tid)+']')];
+   const grid=grids[0],view=grid&&globalThis.Ext?.getCmp?.(grid.id),store=view?.getStore?.(),records=store?.getRange?.();
+   if(location.origin!==t.expected_origin||globalThis.bg?.app?.Version!==t.expected_build
+     ||prep?.document!==document||prep.id!==t.binding.document_id||main.FMapTree?.FServerConnection?.UserName!==t.binding.megaladata_account
+     ||grids.length!==1||tabs.length!==1||!tabs[0].classList.contains('x-tab-active')
+     ||form?.constructor?.name!=='FileStorageForm'||sender?.constructor?.name!=='FileSenderManager'
+     ||!input?.isConnected||input.files?.length!==0||sender.FActiveLoadersCount!==0||sender.FLastConflictResult!==undefined
+     ||Object.keys(sender.FCurrentUploadFilePaths??{}).length||sender.CurrentDirectory!==t.artifact.upload.directory+'/'
+     ||view.el?.dom!==grid||!form.FView?.el?.dom?.contains(grid)||store?.isLoading?.()!==false||store.isBufferedStore
+     ||!Number.isSafeInteger(store.loadCount)||!Array.isArray(records)||store.getCount?.()!==records.length||store.getTotalCount?.()!==records.length
+     ||records.some(r=>r.data?.FileName===t.artifact.name||r.data?.FilePath===t.artifact.upload.destination||r.data?.id===t.artifact.upload.destination))
+    throw Error('PACKAGE_UPLOAD_BINDING_UNAVAILABLE');
+   return {document,prep,card,controller,form,sender,input,grid,gridTid,tab:tabs[0],view,store,loadCount:store.loadCount};
+  },task);
+  const minimum=(await page.evaluate(b=>b.loadCount,binding))+1;
+  if(Date.now()>=task.deadline_at)throw Error('PACKAGE_UPLOAD_DEADLINE');
+  receipt=await upload(page);
+  if(receipt.status!=='AMBIGUOUS'||receipt.error?.code!=='UPLOAD_SERVER_VERIFICATION_REQUIRED'
+    ||receipt.output?.upload_submitted!==true||receipt.cleanup_complete!==true)
+   return result(receipt.status==='NOT_APPLIED'?'NOT_APPLIED':'AMBIGUOUS',null,{code:'PACKAGE_UPLOAD_NOT_CONFIRMED',message:'Original upload did not confirm a completed submission'});
+  await waitReady(page,task,task.deadline_at,trace,minimum);
+  const completion=await page.evaluate(({b,t,minimum})=>{
+   const main=globalThis.bg?.app?.Application?.FInstance?.FMainForm,card=main?.Items?.Workspace?.getActiveTab?.();
+   const grids=[...document.querySelectorAll('[data-tid='+JSON.stringify(b.gridTid)+']')];
+   const visible=e=>e.isConnected&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0&&getComputedStyle(e).visibility!=='hidden';
+   const blocked=[...document.querySelectorAll('.x-mask,.x-mask-msg,.bg-mask-message'),...document.querySelectorAll('[role="dialog"],.x-message-box')].some(visible);
+   if(document!==b.document||globalThis.__megaladataDockPreparationV1!==b.prep||b.prep.id!==t.binding.document_id
+     ||location.origin!==t.expected_origin||globalThis.bg?.app?.Version!==t.expected_build||main.FMapTree?.FServerConnection?.UserName!==t.binding.megaladata_account
+     ||card!==b.card||card.Controller!==b.controller||card.Controller.FController!==b.form||b.form.FFileSenderManager!==b.sender
+     ||b.form.FFileInput!==b.input||!b.input.isConnected||b.input.files.length!==0||b.sender.FActiveLoadersCount!==0
+     ||Object.keys(b.sender.FCurrentUploadFilePaths??{}).length||b.sender.FLastConflictResult!==undefined
+     ||b.sender.CurrentDirectory!==t.artifact.upload.directory+'/'||!b.tab.isConnected||!b.tab.classList.contains('x-tab-active')
+     ||grids.length!==1||grids[0]!==b.grid||globalThis.Ext?.getCmp?.(b.grid.id)!==b.view||b.view.el?.dom!==b.grid||b.view.getStore()!==b.store
+     ||b.store.isLoading()||b.store.isBufferedStore||!Number.isSafeInteger(b.store.loadCount)||b.store.loadCount<minimum||blocked)
+    throw Error('PACKAGE_UPLOAD_OWNER_CHANGED');
+   const records=b.store.getRange(),data=b.store.getData?.(),source=data?.getSource?.()?.items;
+   if(!Array.isArray(records)||b.store.getCount()!==records.length||b.store.getTotalCount()!==records.length
+     ||!Array.isArray(data?.items)||data.items.length!==records.length||data.items.some(r=>!records.includes(r))
+     ||source&&(!Array.isArray(source)||source.length!==records.length||source.some(r=>!records.includes(r))))throw Error('PACKAGE_UPLOAD_STORE_INCOMPLETE');
+   const matches=records.filter(r=>r.data?.FileName===t.artifact.name||r.data?.FilePath===t.artifact.upload.destination||r.data?.id===t.artifact.upload.destination);
+   const row=matches[0]?.data;
+   if(matches.length!==1||row.Type!==0||row.FileName!==t.artifact.name||row.FilePath!==t.artifact.upload.destination
+     ||row.id!==t.artifact.upload.destination||row.Size!==t.artifact.bytes)throw Error('PACKAGE_UPLOAD_ROW_MISMATCH');
+   return {artifact_id:t.artifact.artifact_id,destination:t.artifact.upload.destination,bytes:row.Size,bytes_source:'native_file_store',
+    upload_completion_verified:true,load_count:b.store.loadCount,
+    files_entry:{document_id:b.prep.id,tab_tid:t.snapshot.workflow_ref.tab_tid,directory:t.artifact.upload.directory}};
+  },{b:binding,t:task,minimum});
+  if(Date.now()>=task.deadline_at)throw Error('PACKAGE_UPLOAD_DEADLINE');
+  return result('SUCCEEDED',completion);
+ }catch(error){return result(receipt?.effect_possible?'AMBIGUOUS':'NOT_APPLIED',null,
+  {code:'PACKAGE_UPLOAD_COMPLETION_UNCONFIRMED',message:String(error.message).slice(0,500)});}
+ finally{if(binding)await binding.dispose();}
+}
+
 // Upload submission can settle before its file grid reload does. Wait on the
 // same native directory/view/store before discovery or scrolling, without
 // refreshing, downloading, or resubmitting anything while it is covered.
@@ -306,4 +376,209 @@ export function verifiedDiscoveryReference(artifact,binding,raw) {
    ||proof.active_tab_ref!==binding.active_tab_ref||JSON.stringify(proof.workflow_ref)!==JSON.stringify(binding.workflow_ref))
   throw Error('Discovered download reference is not bound to the prepared destination');
  return proof.file_ref;
+}
+
+// Private native upload lifecycle. Only reads Megaladata objects; all mutations
+// below are Playwright gestures on the observed data-tid of the owned control.
+// The binding holds original object identities across short MCP calls.
+export async function largeUploadNative(page, task) {
+ const read=await page.evaluate(t=>{
+  const fail=()=>{throw Error('MEGALADATA_UPLOAD_UNCERTAIN');};
+  const key=Symbol.for('megaladata-dock.large-upload.v1');
+  const jobs=globalThis[key]??(globalThis[key]=new Map());
+  const prep=globalThis.__megaladataDockPreparationV1,main=globalThis.bg?.app?.Application?.FInstance?.FMainForm;
+  const card=main?.Items?.Workspace?.getActiveTab?.(),form=card?.Controller?.FController,sender=form?.FFileSenderManager;
+  const prefix=t.snapshot.workflow_ref.prefix,gridTid=prefix+';FileStorageForm;pnlFileStorage;tbl';
+  const all=tid=>[...document.querySelectorAll('[data-tid='+JSON.stringify(tid)+']')];
+  const grid=all(gridTid),tab=all(t.snapshot.workflow_ref.tab_tid),component=grid[0]&&globalThis.Ext?.getCmp?.(grid[0].id),store=component?.getStore?.();
+  if(location.origin!==t.expected_origin||bg?.app?.Version!==t.expected_build||prep?.document!==document
+    ||prep.id!==t.binding.document_id||main.FMapTree?.FServerConnection?.UserName!==t.binding.megaladata_account
+    ||grid.length!==1||tab.length!==1||!tab[0].classList.contains('x-tab-active')
+    ||form?.constructor?.name!=='FileStorageForm'||sender?.constructor?.name!=='FileSenderManager'
+    ||sender.CurrentDirectory!==t.artifact.upload.directory+'/'||component.el?.dom!==grid[0]
+    ||!form.FView?.el?.dom?.contains(grid[0])||store?.$className!=='bg.filedialog.FileStore'||store.isBufferedStore)fail();
+  const visible=e=>e?.isConnected&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0
+    &&getComputedStyle(e).display!=='none'&&getComputedStyle(e).visibility!=='hidden';
+  const inventory=()=>{
+   if(store.isLoading?.()!==false)fail();
+   const records=store.getRange?.(),data=store.getData?.(),source=data?.getSource?.()?.items;
+   if(!Array.isArray(records)||records.length>10000||store.getCount()!==records.length||store.getTotalCount()!==records.length
+     ||!Array.isArray(data?.items)||data.items.length!==records.length||data.items.some(r=>!records.includes(r))
+     ||source&&(!Array.isArray(source)||source.length!==records.length||source.some(r=>!records.includes(r))))fail();
+   return records.map(r=>({Type:r.data.Type,FileName:r.data.FileName,FilePath:r.data.FilePath,id:r.data.id,Size:r.data.Size,Time:r.data.Time instanceof Date?r.data.Time.toISOString():r.data.Time}));
+  };
+  const matches=r=>r.FileName===t.artifact.name||r.FilePath===t.artifact.upload.destination||r.id===t.artifact.upload.destination;
+  const exact=r=>r.Type===0&&r.FileName===t.artifact.name&&r.FilePath===t.artifact.upload.destination&&r.id===t.artifact.upload.destination
+    &&Number.isSafeInteger(r.Size)&&r.Size===t.artifact.bytes;
+  if(t.mode==='bind'){
+   if(jobs.has(t.operation_id))fail();
+   if([...document.querySelectorAll('.x-message-box')].some(visible))fail();
+   if(!form.FFileInput?.isConnected||form.FFileInput.files.length||sender.FActiveLoadersCount!==0
+     ||sender.FLastConflictResult!==undefined||Object.keys(sender.FCurrentUploadFilePaths??{}).length)fail();
+   const before=inventory(),existing=before.filter(matches);
+   // Same size/name is never proof of local origin. The receipt comes only
+   // from this runtime's acknowledged private completion journal.
+   const reused=existing.length===1&&exact(existing[0])&&typeof t.artifact.sha256==='string'&&t.receipt
+     &&t.receipt.sha256===t.artifact.sha256&&t.receipt.account===t.binding.megaladata_account&&t.receipt.origin===t.expected_origin
+     &&t.receipt.directory===t.artifact.upload.directory&&JSON.stringify(t.receipt.row)===JSON.stringify(existing[0]);
+   if(existing.length&&!reused)throw Error('UPLOAD_PATH_CONFLICT');
+   jobs.set(t.operation_id,{document,prep,main,card,controller:card.Controller,form,sender,input:form.FFileInput,grid:grid[0],tab:tab[0],component,store,before,
+    loadCount:store.loadCount,artifact:JSON.stringify(t.artifact),reused,cancelClicked:false,
+    errorInfo:globalThis.bg?.ext?.errormessage?.ErrorMsg?.FInstance?.FErrorMessageInfo});
+   return {active:0,bytes:reused?t.artifact.bytes:0,reused:!!reused,row:reused?existing[0]:null};
+  }
+  const b=jobs.get(t.operation_id);
+  if(!b||document!==b.document||prep!==b.prep||main!==b.main||card!==b.card||card.Controller!==b.controller||form!==b.form||sender!==b.sender
+    ||form.FFileInput!==b.input||grid[0]!==b.grid||tab[0]!==b.tab||component!==b.component||store!==b.store||JSON.stringify(t.artifact)!==b.artifact)fail();
+  const paths=Object.keys(sender.FCurrentUploadFilePaths??{});
+  if(paths.some(p=>p!==t.artifact.upload.destination)||![0,1].includes(sender.FActiveLoadersCount))fail();
+  const loaders=sender.FUploadViewController?.FFileLoaders??[];
+  if(!Array.isArray(loaders)||loaders.length>1||loaders.some(l=>l.FullFilename!==t.artifact.upload.destination||l.File?.size!==t.artifact.bytes))fail();
+  const loader=loaders[0];
+  if(loader){if(b.loader&&b.loader!==loader)fail();b.loader=loader;}
+  const bytes=loader?.FStart??b.loader?.FStart??0;
+  if(!Number.isSafeInteger(bytes)||bytes<0||bytes>t.artifact.bytes)fail();
+  const errors=[...document.querySelectorAll('.bg-error-messages')].filter(visible).concat([...document.querySelectorAll('[data-tid$=";p.h;p.t"]')].filter(e=>/^msgbox(?:-\d+)?;p\.h;p\.t$/.test(e.getAttribute('data-tid')??'')&&visible(e)));
+  const quiet=sender.FActiveLoadersCount===0&&paths.length===0&&b.input.files?.length===0&&sender.FLastConflictResult===undefined;
+  const gesture=(tid,kind)=>{const elements=all(tid);if(elements.length!==1)fail();b.gesture={tid,element:elements[0]};return {tid,kind};};
+  if(t.mode==='poll')return {active:sender.FActiveLoadersCount,bytes,quiet,error:errors.length>0};
+  if(t.mode==='cancel'&&quiet){
+   // OnDispose decrements active before the awaited DeleteFile and OnLoadEnd
+   // refresh finish. active=0 alone cannot authorize the next refresh.
+   if((t.source_changed===true&&b.loader?.IsDisposed===true&&b.loader.FFileDeleted!==true)
+     ||store.isLoading?.()!==false)return {active:0,bytes,quiet:false,waiting:true};
+   const dialogs=[...document.querySelectorAll('.x-message-box')].filter(visible);
+   if(dialogs.length){
+    // FileReader errors first Dispose/delete the owned uploader, then open a
+    // native ErrorMsg. It covers Refresh even after sender active reaches zero.
+    // Acknowledge only a new error of this metadata-changed, deleted source.
+    const instance=globalThis.bg?.ext?.errormessage?.ErrorMsg?.FInstance;
+    const root=dialogs[0],message=instance?.FMessageBox,body=instance?.FMessages?.el?.dom;
+    const text=body?.textContent?.trim(),tid=root?.getAttribute('data-tid');
+    if(t.source_changed!==true||dialogs.length!==1||b.loader?.IsDisposed!==true||b.loader.FFileDeleted!==true
+      ||instance?.FErrorMessageInfo===b.errorInfo||message?.el?.dom!==root||globalThis.Ext?.getCmp?.(root.id)!==message
+      ||!body||!root.contains(body)||!visible(body)||!/^File loading error(?:: [^\r\n]{1,512})?$/.test(text??'')
+      ||!/^msgbox(?:-\d+)?$/.test(tid??''))fail();
+    if(b.errorAck){
+     if(b.errorAck.root!==root||b.errorAck.info!==instance.FErrorMessageInfo||b.errorAck.text!==text)fail();
+     return {active:0,bytes,quiet:false,waiting:true};
+    }
+    const buttons=[...document.querySelectorAll('[data-tid^='+JSON.stringify(tid+';tlb;')+']')]
+      .filter(e=>visible(e)&&/;(ok|yes|no|cancel)$/.test(e.getAttribute('data-tid')??''));
+    const ok=all(tid+';tlb;ok'),control=ok[0]&&globalThis.Ext?.getCmp?.(ok[0].id);
+    if(ok.length!==1||buttons.length!==1||buttons[0]!==ok[0]||!root.contains(ok[0])||!visible(ok[0])
+      ||ok[0].innerText?.trim()!=='OK'||control?.el?.dom!==ok[0]||control.disabled!==false)fail();
+    let parent=control;const seen=new Set();
+    for(let i=0;parent&&parent!==message&&i<16&&!seen.has(parent);i++){seen.add(parent);parent=parent.ownerCt;}
+    if(parent!==message)fail();
+    b.errorAck={root,body,instance,message,info:instance.FErrorMessageInfo,text};
+    return {active:0,bytes,quiet:false,server_delete_confirmed:true,gesture:gesture(tid+';tlb;ok','acknowledge_source_error')};
+   }
+   return {active:0,bytes,quiet:true};
+  }
+  if(t.mode==='cancel'&&!quiet){
+   if(b.cancelClicked)return {active:sender.FActiveLoadersCount,bytes,quiet:false};
+   if(loader?.IsDisposed===true)return {active:sender.FActiveLoadersCount,bytes,quiet:false,waiting:true};
+   if(!loader?.Container?.el?.dom?.isConnected)return {active:sender.FActiveLoadersCount,bytes,quiet:false};
+   const container=loader.Container,items=container.items?.items,button=items?.[3],el=button?.el?.dom,tid=el?.getAttribute('data-tid');
+   if(!Array.isArray(items)||items.length!==4||!container.el.dom.contains(el)
+      ||!el.querySelector('.bg-icon-cancel-negative'))fail();
+   // FileReader failure can dispose this exact loader while cancellation is
+   // being captured. Without a data-tid, wait only; never select a substitute.
+   if(!tid||!visible(el)||button.disabled)return {active:sender.FActiveLoadersCount,bytes,quiet:false,waiting:true};
+   if(all(tid).length!==1)fail();
+   b.cancelClicked=true;return {active:sender.FActiveLoadersCount,bytes,quiet:false,gesture:gesture(tid,'cancel')};
+  }
+  if(!quiet)fail();
+  if(t.mode==='refresh'){
+   const tid=prefix+';FileStorageForm;btnRefresh',els=all(tid);
+   if(els.length!==1||!visible(els[0]))fail();b.refreshCount=store.loadCount;
+   return {gesture:gesture(tid,'refresh')};
+  }
+  if(t.mode==='verify'){
+   if(errors.length||!Number.isSafeInteger(store.loadCount))fail();
+   if(store.isLoading?.()!==false||store.loadCount<=b.loadCount)return {waiting:true};
+   const rows=inventory().filter(matches);if(rows.length!==1||!exact(rows[0]))return {waiting:true};
+   return {active:0,bytes:rows[0].Size,quiet:true,row:rows[0],reused:b.reused};
+  }
+  if(t.mode==='cleanup'){
+   if(store.isLoading?.()!==false||!Number.isSafeInteger(b.refreshCount)||!Number.isSafeInteger(store.loadCount)||store.loadCount<=b.refreshCount)return {clean:false,waiting:true};
+   const rows=inventory(),own=rows.filter(matches),others=rows.filter(r=>!matches(r));
+   const order=a=>a.map(r=>JSON.stringify(r)).sort();
+   // Cleanup must restore the complete original inventory, including metadata.
+   if(JSON.stringify(order(others))!==JSON.stringify(order(b.before))||b.reused)fail();
+   if(own.length===0)return {clean:true};
+   if(own.length!==1||own[0].Type!==0||own[0].FilePath!==t.artifact.upload.destination||own[0].FileName!==t.artifact.name||own[0].id!==t.artifact.upload.destination)fail();
+   if(b.deleteClicked)fail();
+   const tid=prefix+';FileStorageForm;colName_'+t.artifact.name.replace(/\s/g,'_').replace(/,/g,''),els=all(tid);
+   if(els.length!==1||!visible(els[0])||!b.grid.contains(els[0]))fail();
+   return {clean:false,gesture:gesture(tid,'select')};
+  }
+  if(t.mode==='delete'){
+   const selected=component.getSelectionModel?.().getSelection?.();
+   if(!Array.isArray(selected)||selected.length!==1||!matches(selected[0].data)||selected[0].data.Type!==0||b.deleteClicked)fail();
+   const tid=prefix+';FileStorageForm;btnDelete',els=all(tid);if(els.length!==1||!visible(els[0]))fail();
+   b.deleteClicked=true;return {gesture:gesture(tid,'delete')};
+  }
+  if(t.mode==='confirm_delete'){
+   if(!b.deleteClicked||b.confirmClicked)fail();
+   const messages=[...document.querySelectorAll('[data-tid$=";cnt;cnt;cmp"]')].filter(visible);
+   if(messages.length!==1||messages[0].textContent.trim()!=='Do you really want to delete the selected item(s)?')fail();
+   const root=messages[0].getAttribute('data-tid').slice(0,-12),tid=root+';tlb;yes',els=all(tid);
+   if(els.length!==1||!visible(els[0])||els[0].textContent.trim()!=='Delete')fail();
+   b.confirmClicked=true;return {gesture:gesture(tid,'confirm_delete')};
+  }
+  fail();
+ },task);
+ if(read.gesture){
+  const target=page.locator('[data-tid='+JSON.stringify(read.gesture.tid)+']');
+  if(await target.count()!==1||!await target.isVisible()||!await target.isEnabled()){
+   if(read.gesture.kind==='cancel')return {...read,gesture:undefined,quiet:false,waiting:true};
+   throw Error('MEGALADATA_UPLOAD_UNCERTAIN');
+  }
+  const handle=await target.elementHandle();
+  try{
+   if(!handle||!await handle.evaluate((el,t)=>{const b=globalThis[Symbol.for('megaladata-dock.large-upload.v1')]?.get(t.id);const form=globalThis.bg?.app?.Application?.FInstance?.FMainForm?.Items?.Workspace?.getActiveTab?.()?.Controller?.FController;
+    if(t.kind==='acknowledge_source_error'){
+     const e=b?.errorAck,instance=globalThis.bg?.ext?.errormessage?.ErrorMsg?.FInstance;
+     if(!e||instance!==e.instance||instance.FMessageBox!==e.message||instance.FErrorMessageInfo!==e.info
+       ||instance.FMessages?.el?.dom!==e.body||e.message.el?.dom!==e.root||!e.root.contains(el)
+       ||e.body.textContent?.trim()!==e.text||b.loader?.IsDisposed!==true||b.loader.FFileDeleted!==true
+       ||b.sender.FActiveLoadersCount!==0||Object.keys(b.sender.FCurrentUploadFilePaths??{}).length||b.input.files?.length)return false;
+    }
+    return b&&document===b.document&&form===b.form&&form.FFileSenderManager===b.sender&&form.FFileInput===b.input&&b.gesture?.element===el&&b.gesture.tid===t.tid&&el.isConnected&&el.getAttribute('data-tid')===t.tid;},{id:task.operation_id,tid:read.gesture.tid,kind:read.gesture.kind})){
+    if(read.gesture.kind==='cancel')return {...read,gesture:undefined,quiet:false,waiting:true};
+    throw Error('MEGALADATA_UPLOAD_UNCERTAIN');
+   }
+   await handle.click({timeout:Math.max(1,Math.min(5000,task.deadline_at-Date.now()))});
+  }finally{await handle?.dispose();}
+ }
+ return read;
+}
+
+// A 7.4.2 toast layout assertion asks whether to enter the debugger. Dismiss
+// only this observed confirm while our upload owns the page; do not patch Debug
+// or application code, and leave every other native dialog to normal handling.
+export async function guardUploadDebugDialog(page,task,mode) {
+ const key=Symbol.for('megaladata-dock.upload-debug-dialog.v1');
+ let state=page[key];
+ if(mode==='install'){
+  if(state){if(state.id!==task.operation_id)throw Error('UPLOAD_DIALOG_OWNER_CHANGED');return;}
+  state={id:task.operation_id,dismissed:0,failed:false,pending:[]};
+  state.handler=dialog=>{state.pending.push((async()=>{
+   const message=`Assert failed: at LoadView.CorrectWindowPosition (${task.expected_origin}/app/bg/filestorage/LoadView.js:94:23)\n\nBreak into debugger?`;
+   if(task.expected_build!=='7.4.2'||await dialog.type()!=='confirm'
+     ||(await page.url()).split('/').slice(0,3).join('/')!==task.expected_origin||await dialog.message()!==message)return;
+   await dialog.dismiss();state.dismissed++;
+  })().catch(()=>{state.failed=true;}));};
+  page.on('dialog',state.handler);page[key]=state;return;
+ }
+ if(!state||state.id!==task.operation_id)return {dismissed:0,failed:false};
+ await Promise.all(state.pending);
+ if(mode==='release'){page.off('dialog',state.handler);delete page[key];}
+ return {dismissed:state.dismissed,failed:state.failed};
+}
+
+export function makeLargeUploadCode(task) {
+ return `async page=>{const task=${JSON.stringify(task)};try{const output=await (${largeUploadNative.toString()})(page,task);const dialog=await (${guardUploadDebugDialog.toString()})(page,task,task.mode==='verify'&&!output.waiting||task.mode==='cleanup'&&output.clean?'release':'status');return {status:'SUCCEEDED',action_key:'artifact.large.native',action_revision:'1',operation_id:task.operation_id,phase:task.mode,effect_possible:!!output.gesture,cleanup_complete:true,output:{...output,debug_dialog_dismissed:dialog.dismissed},error:null,trace:[]};}catch(error){const code=/^[A-Z][A-Z0-9_]{1,100}$/.test(error.message)?error.message:'LARGE_UPLOAD_NATIVE_REFUSED';return {status:'FAILED',action_key:'artifact.large.native',action_revision:'1',operation_id:task.operation_id,phase:task.mode,effect_possible:!['bind','poll','verify'].includes(task.mode),cleanup_complete:false,output:{failure:{name:String(error.name??'Error').slice(0,80),code:String(error.code??'').slice(0,100),message:String(error.message??error).slice(0,2048)}},error:{code,message:code},trace:[]};}}`;
 }

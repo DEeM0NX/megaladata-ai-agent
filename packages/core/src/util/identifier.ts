@@ -1,1 +1,1 @@
-export * as Identifier from "@megaladata-ai-agent/schema/identifier"
+export * as Identifier from "@opencode-ai/schema/identifier"

@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto"
 import type { createMegaladataHost } from "./host"
 import type { InputFile } from "./inputs"
-import { hostError } from "./errors"
+import type { FileReference } from "./file-reference"
+import { hostException, hostFailure } from "./errors"
 import { runtimeCallTimeout } from "../../megaladata-runtime/src/call-timeout.mjs"
 import { HostTaskScope } from "./task-scope"
 import { Schema } from "effect"
@@ -15,6 +16,13 @@ const Admissions = Schema.Array(
     files: Schema.Array(Schema.Struct({ name: Schema.String, data: Schema.String })),
   }),
 )
+const PackageInput = Schema.Struct({
+  admissionID: Schema.NonEmptyString,
+  file: Schema.Struct({ name: Schema.String, data: Schema.String }),
+})
+const PackageAdmission = Schema.Tuple([
+  Schema.Struct({ artifact_id: Schema.NonEmptyString, upload: Schema.Struct({ grant_id: Schema.NonEmptyString }) }),
+])
 const diagnosticTool = {
   name: "dock_diagnostics",
   description:
@@ -72,6 +80,7 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
       applyingScope: boolean
       catalog: Set<string>
       admitted: Set<string>
+      packagePreparation?: AbortController
       // Operation of a browser recovery attempt that still holds the page.
       recovery?: string
     }
@@ -146,6 +155,24 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
       return
     }
     try {
+      const hasPackageInput = "packageInput" in input && input.packageInput !== undefined
+      if (hasPackageInput && (data.method !== "call" || !("name" in input) || input.name !== prepareTool.name))
+        throw new Error("MEGALADATA_SCOPE_DENIED")
+      const packageInput = hasPackageInput ? Schema.decodeUnknownSync(PackageInput)(input.packageInput) : undefined
+      if (packageInput) {
+        const args = "args" in input ? input.args : undefined
+        if (
+          !args ||
+          typeof args !== "object" ||
+          !("intent" in args) ||
+          args.intent !== "open_package" ||
+          "package_path" in args ||
+          "local_package_path" in args ||
+          "workflow_ref" in args ||
+          !packageInput.file.name.toLowerCase().endsWith(".mgp")
+        )
+          throw new Error("MEGALADATA_SCOPE_DENIED")
+      }
       if (data.method === "acquire") {
         if (
           !("session" in input) ||
@@ -269,11 +296,12 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
         typeof input.name === "string" &&
         !knowledgeTools.has(input.name) &&
         input.name !== diagnosticTool.name
+      const referenceCall = ["referenceReserve", "referenceAdmit", "referenceDiscard"].includes(data.method)
       if (
-        (data.method === "admit" || browserCall) &&
+        (data.method === "admit" || referenceCall || browserCall) &&
         (run.applyingScope ||
           run.scope?.profile !== "megaladata-automation" ||
-          (data.method === "admit" && !service.hasRuntime(run.lease?.generation ?? -1, run.chat)) ||
+          ((data.method === "admit" || referenceCall) && !service.hasRuntime(run.lease?.generation ?? -1, run.chat)) ||
           (browserCall &&
             "name" in input &&
             typeof input.name === "string" &&
@@ -283,9 +311,12 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
       if (data.method !== "interrupt" && service.journal.pending().length) throw new Error("MEGALADATA_RECOVERY_REQUIRED")
       // Refuse competing calls before durable admission. The active call keeps its
       // own journal and lease; a known no-dispatch refusal is not uncertainty.
-      if (data.method === "call" && run.dispatching) throw new Error("MEGALADATA_CALL_BUSY")
-      if (data.method === "call") run.dispatching = true
-      if (browserCall) run.browserDispatching = true
+      if ((data.method === "call" || referenceCall) && run.dispatching) throw new Error("MEGALADATA_CALL_BUSY")
+      if (data.method === "call" || referenceCall) run.dispatching = true
+      if (packageInput) run.packagePreparation = new AbortController()
+      const packageAborted = () =>
+        packageInput && (state.closed || run.released || run.packagePreparation?.signal.aborted)
+      if (browserCall || referenceCall) run.browserDispatching = true
       run.calls++
       try {
         if (data.method === "tools") {
@@ -365,7 +396,48 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
           )
           return
         }
+        if (referenceCall) {
+          const lease = await connectionLease(input.run, run)
+          const owner = {
+            run: input.run,
+            chat: run.chat,
+            userMessage: run.scope!.taskMessageID,
+            generation: lease.generation,
+          }
+          if (data.method === "referenceDiscard") {
+            if (!("grant" in input) || typeof input.grant !== "string") throw Error("MEGALADATA_INPUT_INVALID")
+            await service.references.discard(owner, input.grant)
+            reply({ id: data.id, result: { discarded: true } }, lease.generation)
+            return
+          }
+          if (data.method === "referenceReserve") {
+            if (
+              !("userMessage" in input) ||
+              input.userMessage !== owner.userMessage ||
+              !("name" in input) ||
+              typeof input.name !== "string" ||
+              !("snapshot" in input)
+            )
+              throw Error("MEGALADATA_INPUT_INVALID")
+            const result = await service.references.reserve(
+              owner,
+              input.name,
+              input.snapshot as FileReference["snapshot"],
+            )
+            reply({ id: data.id, result }, lease.generation)
+            return
+          }
+          if (!("reference" in input) || !input.reference || typeof input.reference !== "object")
+            throw Error("MEGALADATA_INPUT_INVALID")
+          const reference = await service.references.commit(owner, input.reference as FileReference)
+          if (state.closed || run.released) throw Error("MEGALADATA_HOST_CLOSED")
+          const runtime = await service.runtime(lease.generation, run.chat)
+          const result = await runtime.request("admitReference", { reference })
+          reply({ id: data.id, result }, lease.generation)
+          return
+        }
         if (data.method === "interrupt") {
+          run.packagePreparation?.abort()
           if (!run.lease) {
             const status = await service.api.status()
             if (service.hasRuntime(status.generation, run.chat)) await connectionLease(input.run, run)
@@ -424,6 +496,13 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
           throw new Error("MEGALADATA_SCOPE_DENIED")
         const recovery = { id: undefined as string | undefined }
         try {
+          const packageAdmission = packageInput
+            ? {
+                userMessage: packageInput.admissionID,
+                files: await service.inputs(lease.generation, run.chat, packageInput.admissionID, [packageInput.file]),
+              }
+            : undefined
+          if (packageAborted()) throw new Error("MEGALADATA_RUN_ABORTED")
           // A dead runtime is replaced before admission. Past the relaunch limit this
           // is a known refusal, not an uncertain dispatch.
           if (!service.hasRuntime(lease.generation, run.chat)) {
@@ -431,21 +510,30 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
             run.catalog = new Set([prepareTool.name])
           }
           const runtime = await service.runtime(lease.generation, run.chat)
+          if (packageAborted()) throw new Error("MEGALADATA_RUN_ABORTED")
+          const packageArtifact = packageAdmission
+            ? await runtime.request("admit", packageAdmission).then((value) => {
+                const [artifact] = Schema.decodeUnknownSync(PackageAdmission)(value)
+                return { artifactID: artifact.artifact_id, uploadGrantID: artifact.upload.grant_id }
+              })
+            : undefined
+          if (packageAborted()) throw new Error("MEGALADATA_RUN_ABORTED")
           for (const admission of admissions) {
             const files = await service.inputs(lease.generation, run.chat, admission.userMessage, [...admission.files])
             if (run.admitted.has(admission.userMessage)) continue
             await runtime.request("admit", { files, userMessage: admission.userMessage })
             run.admitted.add(admission.userMessage)
           }
+          if (packageAborted()) throw new Error("MEGALADATA_RUN_ABORTED")
           recovery.id = await service.journal.begin(run.chat, lease.generation)
           run.active.add(recovery.id)
-          if (!service.hasRuntime(lease.generation, run.chat)) {
+          if (!service.hasRuntime(lease.generation, run.chat) || packageAborted()) {
             // Exit during journal admission precedes dispatch. Settle this unused
             // record, and require explicit preparation before a replacement owner.
             await service.journal.settle(recovery.id, true)
             run.active.delete(recovery.id)
             recovery.id = undefined
-            throw new Error("MEGALADATA_SCOPE_DENIED")
+            throw new Error(packageAborted() ? "MEGALADATA_RUN_ABORTED" : "MEGALADATA_SCOPE_DENIED")
           }
           if (state.closed) throw new Error("MEGALADATA_HOST_CLOSED")
           const result = await runtime.request(
@@ -453,6 +541,8 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
             {
               name: input.name,
               arguments: "args" in input ? input.args : undefined,
+              ...(packageArtifact ? { packageArtifact } : {}),
+              ...(input.name === "dock_node_apply" && "scanReceipt" in input ? { scanReceipt: input.scanReceipt } : {}),
             },
             runtimeCallTimeout(input.name, "args" in input ? input.args : undefined) + 15_000,
           )
@@ -484,21 +574,24 @@ export function megaladataHostPort(port: HostPort, service: Awaited<ReturnType<t
           if (error instanceof Error && error.message === "MEGALADATA_RUNTIME_UNAVAILABLE") throw error
           // A journal write failure precedes runtime dispatch and cannot establish
           // an uncertain external operation without an admitted journal identity.
-          if (!recovery.id) throw new Error(hostError(error))
+          if (!recovery.id) throw hostException(error)
           await abandon(run)
           service.markRuntimeStale(run.chat)
           throw new Error("MEGALADATA_CALL_UNCERTAIN")
         }
       } finally {
-        if (data.method === "call") run.dispatching = false
-        if (browserCall) run.browserDispatching = false
+        if (data.method === "call" || referenceCall) {
+          run.dispatching = false
+          run.packagePreparation = undefined
+        }
+        if (browserCall || referenceCall) run.browserDispatching = false
         run.calls--
         if (run.released && !run.calls) {
           await release(input.run, run)
         }
       }
     } catch (error) {
-      reply({ id: data.id, error: hostError(error) }, runs.get(input.run)?.lease?.generation)
+      reply({ id: data.id, ...hostFailure(error) }, runs.get(input.run)?.lease?.generation)
     }
   }
   port.on("message", ({ data }) => {

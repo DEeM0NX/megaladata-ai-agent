@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { Script } from "@megaladata-ai-agent/script"
+import { Script } from "@opencode-ai/script"
 import { resolve } from "node:path"
 
 await import("./prebuild")

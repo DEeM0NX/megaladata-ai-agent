@@ -8,11 +8,11 @@
       "dependsOn": [],
       "outputs": ["dist/**"]
     },
-    "@megaladata-ai-agent/plugin#build": {
-      "dependsOn": ["@megaladata-ai-agent/sdk#build"],
+    "@opencode-ai/plugin#build": {
+      "dependsOn": ["@opencode-ai/sdk#build"],
       "outputs": ["dist/**"]
     },
-    "@megaladata-ai-agent/agent#test": {
+    "opencode#test": {
       "dependsOn": ["^build"],
       "outputs": [],
       "passThroughEnv": ["*"]
@@ -21,22 +21,25 @@
       "outputs": [],
       "passThroughEnv": ["MEGALADATA_AI_AGENT_TEST_NODE", "MEGALADATA_AI_AGENT_TEST_BROWSERS"]
     },
-    "@megaladata-ai-agent/core#test": {
+    "@megaladata-ai-agent/product#test": {
+      "outputs": []
+    },
+    "@opencode-ai/core#test": {
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "@megaladata-ai-agent/function#test": {
+    "@opencode-ai/function#test": {
       "outputs": []
     },
-    "@megaladata-ai-agent/app#test": {
+    "@opencode-ai/app#test": {
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "@megaladata-ai-agent/ui#test": {
+    "@opencode-ai/ui#test": {
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "@megaladata-ai-agent/session-ui#test": {
+    "@opencode-ai/session-ui#test": {
       "dependsOn": ["^build"],
       "outputs": []
     }

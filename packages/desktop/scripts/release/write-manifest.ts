@@ -89,6 +89,9 @@ if (
   )
 )
   throw Error("Target installer artifact is required")
+// The public checkout does not include docs/migration/source-map.json.
+// The bundled runtime license is the remaining attribution for this build.
+const source = await fileHash(join(root, "packages/megaladata-runtime/LICENSE"))
 const manifest = decodeManifest({
   schemaVersion: 1,
   version: args.version,
@@ -106,7 +109,7 @@ const manifest = decodeManifest({
         actionManifestSha256: staged.actionManifestSha256,
       }),
     ),
-    importSha256: null,
+    importSha256: source,
   },
   target: {
     platform: mac ? "darwin" : target === "linux-x64" ? "linux" : "win32",
@@ -199,10 +202,7 @@ const manifest = decodeManifest({
         argv: [
           "bun",
           "test",
-          "src/main/megaladata/connection-service.test.ts",
-          "src/main/megaladata/connection-store.test.ts",
-          "src/main/megaladata/credentials.test.ts",
-          "src/main/megaladata/recovery-store.test.ts",
+          "src/main/megaladata",
           "electron-builder.config.test.ts",
           "scripts/release/artifact.test.ts",
         ],
@@ -211,12 +211,12 @@ const manifest = decodeManifest({
     reportFiles: mac
       ? ["static-dmg.json", "static-zip.json"]
       : target === "linux-x64"
-        ? ["static-deb.json", "static-appimage.json", "linux-matrix/linux-matrix.json"]
+        ? ["static-deb.json", "static-appimage.json"]
         : ["static-nsis.json", "windows-native.json"],
   },
   provenance: {
     licensesSha256: await fileHash(join(resources, "THIRD_PARTY_NOTICES.md")),
-    migrationManifestSha256: null,
+    migrationManifestSha256: source,
   },
   artifacts,
 })

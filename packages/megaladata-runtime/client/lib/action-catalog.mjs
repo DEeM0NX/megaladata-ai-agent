@@ -326,8 +326,11 @@ function validateManifest(manifest, root, allowedStatuses) {
 
 async function readRemoteText(remote, uri, signal) {
   const result = await remote.callTool({ name: 'read', arguments: { uris: [uri] } }, undefined, { signal, timeout: 60000 });
-  if (result?.isError) throw new Error(`Dock catalog read failed for ${uri}`);
   const blocks = (result?.content ?? []).filter(block => block.type === 'text').map(block => block.text);
+  if (result?.isError) {
+    const detail = blocks.join(' ').replace(/[\r\n]+/g, ' ').replace(/bearer\s+\S+/gi, 'bearer [redacted]').slice(0, 240);
+    throw new Error(`Dock catalog read failed for ${uri}${detail ? `: ${detail}` : ''}`);
+  }
   if (blocks.length !== 1 || !blocks[0].trim()) throw new Error(`Dock catalog read returned no exact text for ${uri}`);
   return blocks[0].replace(/^=== .* ===\r?\n/, '');
 }
@@ -370,43 +373,13 @@ export async function pinActionCatalog(remote, {
   // Admission changes only the pointer and adds acceptance. Tested release bytes
   // remain immutable candidates even after they are admitted to production.
   const releaseRoot = validateManifest(manifest, root, new Set(['candidate']));
+  const actionStatuses = current.status === 'candidate' ? new Set(['candidate', 'stale']) : new Set(['candidate']);
   if (releaseRoot + '/manifest.json' !== current.manifest_uri || manifest.catalog_version !== current.catalog_version) fail('manifest identity does not match current.json');
   const texts = Object.fromEntries(await Promise.all(FILE_NAMES.map(async name => {
     const text = await readRemoteText(remote, `${releaseRoot}/${name}`, signal);
     if (digest(text) !== manifest.files[name]) fail(`${name} digest mismatch`);
     return [name, text];
   })));
-  return finishPinnedCatalog(current, manifest, texts, { remote, signal, runtimeIdentity, targetIdentity });
-}
-
-// The installed client no longer reads viking executor-preview releases or
-// compares them to a release SHA-256. Gesture definitions ship with the runtime.
-export async function pinBundledActionCatalog() {
-  const directory = new URL('../../executor/catalog/', import.meta.url);
-  const texts = Object.fromEntries(await Promise.all(FILE_NAMES.map(async name => [name, await readFile(new URL(name, directory), 'utf8')])));
-  const actionsJson = parseJson(texts['actions.json'], 'actions.json');
-  const compatibility = bundledCompatibility();
-  const manifest = {
-    schema_version: 1, catalog_version: actionsJson.catalog_version, status: 'candidate', capability_abi: CAPABILITY_ABI,
-    min_executor_revision: '1.0.0', e2e_commit: actionsJson.e2e_commit, created_at: '2026-09-04T00:00:00Z',
-    files: Object.fromEntries(FILE_NAMES.map(name => [name, digest(texts[name])])), compatibility,
-  };
-  const current = {
-    schema_version: 1, status: 'candidate', catalog_version: actionsJson.catalog_version,
-    manifest_uri: `${ACTION_CATALOG_ROOT}/releases/${actionsJson.catalog_version}/manifest.json`,
-    manifest_sha256: digest(JSON.stringify(manifest)),
-  };
-  return finishPinnedCatalog(current, manifest, texts, {});
-}
-
-function bundledCompatibility() {
-  const platform = process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : process.platform === 'linux' ? 'linux' : null;
-  if (!platform) fail('unsupported compatibility platform/browser');
-  return { profile_id: `megaladata-7.4.2-${platform}-chromium`, megaladata_build: '7.4.2', platform, browser: 'chromium' };
-}
-
-async function finishPinnedCatalog(current, manifest, texts, { remote, signal, runtimeIdentity, targetIdentity } = {}) {
-  const actionStatuses = current.status === 'candidate' ? new Set(['candidate', 'stale']) : new Set(['candidate']);
   const actionsJson = parseJson(texts['actions.json'], 'actions.json');
   const selectorsJson = parseJson(texts['selectors.json'], 'selectors.json');
   const sourceIndex = parseJson(texts['source-index.json'], 'source-index.json');
@@ -437,6 +410,52 @@ async function finishPinnedCatalog(current, manifest, texts, { remote, signal, r
     } };
   if (targetIdentity) assertCatalogTarget(pinned, targetIdentity);
   return deepFreeze(pinned);
+}
+
+// The installed client no longer reads viking executor-preview releases or
+// compares them to a release SHA-256. Gesture definitions ship with the runtime.
+export async function pinBundledActionCatalog() {
+  const directory = new URL('../../executor/catalog/', import.meta.url);
+  const texts = Object.fromEntries(await Promise.all(FILE_NAMES.map(async name => [name, await readFile(new URL(name, directory), 'utf8')])));
+  const actionsJson = parseJson(texts['actions.json'], 'actions.json');
+  const compatibility = bundledCompatibility();
+  const manifest = {
+    schema_version: 1, catalog_version: actionsJson.catalog_version, status: 'candidate', capability_abi: CAPABILITY_ABI,
+    min_executor_revision: '1.0.0', e2e_commit: actionsJson.e2e_commit, created_at: '2026-09-04T00:00:00Z',
+    files: Object.fromEntries(FILE_NAMES.map(name => [name, digest(texts[name])])), compatibility,
+  };
+  const current = {
+    schema_version: 1, status: 'candidate', catalog_version: actionsJson.catalog_version,
+    manifest_uri: `${ACTION_CATALOG_ROOT}/releases/${actionsJson.catalog_version}/manifest.json`,
+    manifest_sha256: digest(JSON.stringify(manifest)),
+  };
+  const actionStatuses = new Set(['candidate', 'stale']);
+  const selectorsJson = parseJson(texts['selectors.json'], 'selectors.json');
+  const sourceIndex = parseJson(texts['source-index.json'], 'source-index.json');
+  const actions = validateActions(actionsJson, manifest, actionStatuses);
+  const selectors = validateSelectors(selectorsJson, manifest);
+  for (const action of actions.values()) {
+    if (action.selector_symbols.some(symbol => !selectors.has(symbol))) fail(`${action.action_key} names an unknown selector`);
+  }
+  validateSourceIndex(sourceIndex, manifest, actions, selectors);
+  return deepFreeze({
+    current, manifest, compatibility, actionsJson, selectorsJson, sourceIndex, actions, selectors,
+    acceptance: null, acceptanceVerified: false,
+    pins: {
+      capabilityAbi: CAPABILITY_ABI, executorRevision: EXECUTOR_REVISION,
+      actionCatalogVersion: manifest.catalog_version, actionCatalogDigest: manifest.files['actions.json'],
+      selectorCatalogDigest: manifest.files['selectors.json'], e2eCommit: manifest.e2e_commit,
+      actionManifestDigest: current.manifest_sha256, catalogLifecycleStatus: 'candidate',
+      acceptanceVerified: false, acceptanceDigest: null,
+      compatibilityProfile: manifest.compatibility,
+    },
+  });
+}
+
+function bundledCompatibility() {
+  const platform = process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : process.platform === 'linux' ? 'linux' : null;
+  if (!platform) fail('unsupported compatibility platform/browser');
+  return { profile_id: `megaladata-7.4.2-${platform}-chromium`, megaladata_build: '7.4.2', platform, browser: 'chromium' };
 }
 
 function deepFreeze(value, seen = new Set()) {

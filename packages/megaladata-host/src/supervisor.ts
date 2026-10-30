@@ -2,6 +2,7 @@ import { fork } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
+import { hostError, hostException } from "./errors"
 
 export type Launch = {
   node: string
@@ -53,6 +54,12 @@ export function runtimeEnvironment(environment: NodeJS.ProcessEnv, platform = pr
     "TEMP",
     "TMP",
     "TMPDIR",
+    "PATH",
+    "PATHEXT",
+    "USERNAME",
+    "USERDOMAIN",
+    "HOMEDRIVE",
+    "HOMEPATH",
     "LANG",
     "LC_ALL",
     "SSL_CERT_FILE",
@@ -192,11 +199,13 @@ async function superviseProcess(
     clearTimeout(request.timer)
     if ("error" in message) {
       request.reject(
-        new Error(
-          typeof message.error === "string" && /^MEGALADATA_[A-Z_]+$/.test(message.error)
-            ? message.error
-            : "MEGALADATA_RUNTIME_FAILED",
-        ),
+        hostError(message) !== "MEGALADATA_HOST_REQUEST_FAILED"
+          ? hostException(message)
+          : new Error(
+              typeof message.error === "string" && /^MEGALADATA_[A-Z_]+$/.test(message.error)
+                ? message.error
+                : "MEGALADATA_RUNTIME_FAILED",
+            ),
       )
       return
     }

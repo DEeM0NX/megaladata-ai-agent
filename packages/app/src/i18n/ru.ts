@@ -1,4 +1,6 @@
 export const dict = {
+  "prompt.attachment.missingPath":
+    "У вложения нет пути на диске. Сохраните файл и приложите его через выбор файла либо укажите путь.",
   "megaladata.saveClose": "Сохранить и закрыть",
   "megaladata.saving": "Сохраняем настройки…",
   "megaladata.applying": "Применяем настройки…",

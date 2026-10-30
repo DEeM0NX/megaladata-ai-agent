@@ -103,7 +103,7 @@ export function createRestRequestNodeSupport(config){
      need(links.length<=1,'input 0 is ambiguous');
      existingInput=links[0]??null;
      if(existingInput&&(existingInput.source!==request.inputs[0].source.node_id||existingInput.output!==request.inputs[0].output)){
-      const error=Error('REST request: input 0 is connected to a different raw source or output; no encoder or connection was created. next_step: dock_node_apply with a NEW operation_id and a NEW integration.rest_request target, the requested raw inputs, the same connection/query_parameters and finish:"execute". The existing REST and its input are preserved.');
+      const error=Error('REST request: input 0 is connected to a different raw source or output; no encoder or connection was created. next_step: dock_node_apply with a NEW operation_id and a NEW integration.rest_request target, the requested raw inputs and query_parameters and finish:"execute". If the URL or ordered query parameter names changed, supply a NEW unique connection name and base_url; reuse the saved connection name only when both are unchanged. The existing REST and its input are preserved.');
       error.nodePhaseRefusal={phase:'target',status:'NOT_APPLIED',effect_possible:false,cleanup_complete:true};
       throw error;
      }
@@ -111,9 +111,9 @@ export function createRestRequestNodeSupport(config){
     // Megaladata 7.4.2 concatenates raw query values before parsing the URL.
     // Prepare values through the existing JS lifecycle, rather than requiring
     // the model to author a codec or changing the caller's source table.
-    const target_inputs=request.inputs.length?[await prepareQueryEncoder(options,ctx,config)]:null;
-    if(existingInput)options.operation.restQueryInput={edge:existingInput,encoder:target_inputs[0].source};
-    const result=await runRestStep(options,{...ctx,document_id:request.document_id,workflow_ref:request.workflow_ref},'connection',makeRestConnectionCode,request.parameters,config);
+    // Preserve the already confirmed data edge on reconfiguration.
+    const target_inputs=request.inputs.length?(existingInput?request.inputs:[await prepareQueryEncoder(options,ctx,config)]):null;
+    const result=await runRestStep(options,{...ctx,document_id:request.document_id,workflow_ref:request.workflow_ref},'connection',makeRestConnectionCode,{...request.parameters,...(request.target.kind==='existing'?{existing_target:request.target.ref}:{})},config);
     connection=result.connection;return {...result,...(target_inputs?{target_inputs}:{})};
    },
    beforeInput:async(options,ctx)=>{

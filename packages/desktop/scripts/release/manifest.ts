@@ -19,8 +19,7 @@ export const Manifest = Schema.Struct({
     dirty: flag,
     patchSha256: nullable,
     inputsManifestSha256: text,
-    // The docs catalog was removed from the product tree, so the migration map may be absent.
-    importSha256: nullable,
+    importSha256: text,
   }),
   target: Schema.Struct({
     platform: Schema.Literals(["linux", "win32", "darwin"]),
@@ -73,7 +72,7 @@ export const Manifest = Schema.Struct({
     commands: Schema.Array(Schema.Struct({ cwd: text, argv: Schema.Array(text) })),
     reportFiles: Schema.Array(text),
   }),
-  provenance: Schema.Struct({ licensesSha256: text, migrationManifestSha256: nullable }),
+  provenance: Schema.Struct({ licensesSha256: text, migrationManifestSha256: text }),
   artifacts: Schema.Array(
     Schema.Struct({
       file: text,

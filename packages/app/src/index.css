@@ -1,6 +1,6 @@
-@import "@megaladata-ai-agent/ui/styles/tailwind";
-@import "@megaladata-ai-agent/session-ui/styles";
-@import "@megaladata-ai-agent/ui/v2/styles/tailwind.css";
+@import "@opencode-ai/ui/styles/tailwind";
+@import "@opencode-ai/session-ui/styles";
+@import "@opencode-ai/ui/v2/styles/tailwind.css";
 @import "tw-animate-css";
 
 @font-face {
